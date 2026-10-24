@@ -2,3 +2,8 @@ node_modules/
 out/
 .venv/
 *.raw.mp4
+public/audio/
+public/vo/*.wav
+!public/vo/*.user.*
+src/film/*.tmp
+__pycache__/

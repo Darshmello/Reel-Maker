@@ -57,8 +57,9 @@ def main(slug):
     target = spec['duration'] - TAIL
     lines = lines_of(spec)
     tmp = tempfile.mkdtemp()
-    for rate_pct in (0, 6, 12, 18, 24):
-        rate = f'+{rate_pct}%'
+    # natural pace first; faster if the lines don't fit, slightly slower if they leave a long silence
+    for rate_pct in (0, 6, 12, 18, 24, -6, -10):
+        rate = f'{rate_pct:+d}%'
         clips = []
         for i, line in enumerate(lines):
             mp3 = os.path.join(tmp, f'{i}_{rate_pct}.mp3')
@@ -66,7 +67,7 @@ def main(slug):
             clips.append(trim(pcm(mp3)))
         speech = sum(len(c) for c in clips) / 2 / SR
         gap = (target - LEAD - speech) / (len(clips) - 1)
-        if gap >= 0.35:
+        if 0.35 <= gap <= 1.8 or (rate_pct < 0 and gap >= 0.35):
             break
     gap = min(gap, 1.8)
     out = bytearray(int(LEAD * SR) * 2)

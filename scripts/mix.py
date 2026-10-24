@@ -180,6 +180,8 @@ def main(slug):
         w, x = e['what'], e.get('x', 0)
         if e['id'] == 'intro':
             put(fx, norm(chime()) * db(-16), at(e['fr']))
+        elif e['id'] == 'end':
+            put(fx, norm(chime(hz('E5'))) * db(-19), at(e['fr']))
         elif e['id'].startswith('act'):
             put(fx, norm(whoosh(0.6, True, e['fr'])) * db(-20), at(e['fr']) - 0.35)
         elif w == 'phone into drawer':

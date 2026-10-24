@@ -28,7 +28,7 @@ export type Spec = {
   duration: number; // seconds
   intro: {line: string; anchor: string; cam0: CamKey; cam: CamKey};
   acts: ActSpec[];
-  end: {line: string; anchor: string; title: string};
+  end: {line: string; anchor: string; title: string; rewind?: boolean}; // rewind: world snaps back to the opening and loops
 };
 
 export type SoundEvent = {id: string; fr: number; dur?: number; what: string; x?: number};
@@ -91,8 +91,9 @@ export const makeBeats = (spec: Spec, words: Word[]) => {
 
   // World time. Runs with the film until the end card, then rewinds to the opening state in
   // REWIND frames and plays the opening again, so the last frame loops back to frame 0.
+  const rewind = spec.end.rewind ?? false;
   const eff = (fr: number) => {
-    if (fr < endStart) return fr;
+    if (!rewind || fr < endStart) return fr;
     if (fr < endStart + REWIND) {
       const t = (fr - endStart) / REWIND;
       const k = t * t * (3 - 2 * t);
@@ -121,10 +122,13 @@ export const makeBeats = (spec: Spec, words: Word[]) => {
     if (a.kind === 'crowd') events.push({id: `crowd${a.i}`, fr: a.fxStart, dur: a.fxEnd - a.fxStart, what: 'crowd murmur'});
     if (a.kind === 'snow') events.push({id: `snow${a.i}`, fr: a.fxStart, dur: a.fxEnd - a.fxStart, what: 'winter wind'});
   }
-  events.push({id: 'rewind', fr: endStart, dur: REWIND, what: 'rewind'});
-  if (spec.hero) events.push({id: 'ping', fr: endStart + REWIND + 6, what: 'phone notification'});
+  events.push({id: 'end', fr: endStart, what: 'end card'});
+  if (rewind) events.push({id: 'rewind', fr: endStart, dur: REWIND, what: 'rewind'});
+  if (rewind && spec.hero) events.push({id: 'ping', fr: endStart + REWIND + 6, what: 'phone notification'});
+  // frame the end card's title lands: after the rewind, or right as the end line starts
+  const endTitleAt = rewind ? endStart + REWIND - 4 : endStart + 2;
 
-  return {spec, words, cue, total, introAt, acts, endStart, eff, prog, camKeys, events};
+  return {spec, words, cue, total, introAt, acts, endStart, endTitleAt, eff, prog, camKeys, events};
 };
 
 export const DEFAULT_AMOUNT: Record<ActKind, number> = {towers: 30, blackout: 24, rockets: 10, water: 1, crowd: 2500, snow: 1, rain: 0.3};
