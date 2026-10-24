@@ -7,6 +7,7 @@ import {spawn} from 'node:child_process';
 import {createReadStream, existsSync, readFileSync, statSync, writeFileSync} from 'node:fs';
 import {extname, join, resolve} from 'node:path';
 import {makeCue} from '../src/film/beats.ts';
+import {agentConfig, generate, installed, saveAgentConfig} from './generate.mjs';
 
 const ROOT = resolve(import.meta.dirname, '..');
 const PUB = join(ROOT, 'studio', 'public');
@@ -188,7 +189,37 @@ const file = (req, res, p, type) => {
 createServer(async (req, res) => {
   const url = new URL(req.url, 'http://x');
   const path = decodeURIComponent(url.pathname);
+  // this server runs commands: only answer this page. Host blocks DNS rebinding; Origin + JSON body
+  // block cross-site posts (a JSON content type forces a CORS preflight that is never answered)
+  const ok = [`127.0.0.1:${PORT}`, `localhost:${PORT}`];
+  if (!ok.includes(req.headers.host)) return json(res, 403, {error: 'bad host'});
+  if (req.method === 'POST') {
+    const origin = req.headers.origin;
+    if ((origin && !ok.some((h) => origin === `http://${h}`)) || !String(req.headers['content-type']).startsWith('application/json')) return json(res, 403, {error: 'bad origin'});
+  }
   try {
+    if (path === '/api/agents' && req.method === 'GET') {
+      const {agents, selected} = agentConfig();
+      return json(res, 200, {selected, agents: agents.map((a) => ({id: a.id, name: a.name, command: a.command ?? null, builtin: !!a.builtin, custom: !!a.custom, installed: installed(a)}))});
+    }
+    if (path === '/api/agents' && req.method === 'POST') {
+      const b = await body(req);
+      const {local, agents} = agentConfig();
+      if (b.selected && agents.some((a) => a.id === b.selected)) saveAgentConfig({selected: b.selected});
+      if (b.custom) {
+        const {id, name, command} = b.custom;
+        if (!/^[a-z0-9-]{1,32}$/.test(id ?? '') || !String(name ?? '').trim() || !String(command ?? '').trim()) return json(res, 400, {error: 'custom agent needs an id (a-z, 0-9, -), a name and a command'});
+        saveAgentConfig({custom: [...(local.custom ?? []).filter((a) => a.id !== id), {id, name: name.trim(), command: command.trim()}], selected: id});
+      }
+      if (b.remove) saveAgentConfig({custom: (local.custom ?? []).filter((a) => a.id !== b.remove), selected: local.selected === b.remove ? 'claude' : local.selected});
+      return json(res, 200, {ok: true});
+    }
+    if (path === '/api/generate' && req.method === 'POST') {
+      const {prompt, agent} = await body(req);
+      if (!String(prompt ?? '').trim()) return json(res, 400, {error: 'write a prompt first'});
+      const r = await generate(String(prompt).slice(0, 500), {validate, slugs: readIdeas().map((s) => s.slug), agentId: agent});
+      return json(res, 200, r);
+    }
     if (path === '/api/films' && req.method === 'GET') return json(res, 200, {films: films(), palette: palette(), kinds: KINDS, job: jobView()});
     if (path === '/api/check' && req.method === 'POST') return json(res, 200, validate(await body(req)));
     if (path === '/api/films' && req.method === 'POST') {

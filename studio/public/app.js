@@ -26,6 +26,15 @@ const AMOUNT = {
   snow: [0.1, 1, 0.05, [0.45, 1, 1, 1]],
   rain: [0.05, 1, 0.05, [0.15, 0.55, 0.85, 0.95]],
 };
+const KIND_MORE = {
+  towers: 'Good for growth, money, productivity, progress.',
+  blackout: 'A server farm with an 18+ sign; its lights go out rack by rack. For a website, app or the internet dying.',
+  rockets: 'Launch pads appear in the bay and rockets lift off on smoke. For space, ambition, the far future.',
+  water: 'The sea rises over the harbour, then the streets, then all but the rooftops.',
+  crowd: 'Tiny people fill the park, then the streets and bridge, then the rooftops.',
+  snow: 'Snow falls and covers the city white.',
+  rain: 'Rain pours and the streets flood a little.',
+};
 const CAMS = [{x: -0.35, z: 10.5}, {x: 0.6, z: 11}, {x: 0, z: 14}, {x: 0.3, z: 12.5}];
 const VOICES = ['en-US-AndrewNeural', 'en-US-AriaNeural', 'en-US-GuyNeural', 'en-US-JennyNeural', 'en-GB-RyanNeural', 'en-GB-SoniaNeural', 'en-AU-NatashaNeural'];
 
@@ -50,6 +59,8 @@ async function load() {
   renderGrid();
   renderHero();
   renderTemplates();
+  renderTemplateDocs();
+  $('#navFilms').textContent = DATA.films.filter((f) => f.video).length || '';
   if (!spec) useTemplate(DATA.films[DATA.films.length - 1]?.spec ?? null, false);
   if (DATA.job) showJob(DATA.job);
 }
@@ -107,15 +118,15 @@ function renderGrid() {
     }
     el.onclick = (e) => {
       const act = e.target.closest('[data-act]')?.dataset.act;
-      if (act === 'edit') return (useTemplate(f.spec, true), go('#studio'));
-      if (act === 'remix') return (useTemplate(f.spec, false), go('#studio'));
+      if (act === 'edit') return (useTemplate(f.spec, true), go('#/create'));
+      if (act === 'remix') return (useTemplate(f.spec, false), go('#/create'));
       if (act === 'render') return confirmRender(e.target.closest('button'), f.spec.slug, !!f.video);
       if (f.video) openModal(f);
     };
     el.onkeydown = (e) => e.key === 'Enter' && e.target === el && f.video && openModal(f);
   }
 }
-const go = (sel) => $(sel).scrollIntoView({behavior: 'smooth'});
+const go = (route) => (location.hash = route);
 
 // an inline second click instead of a browser dialog
 function confirmRender(btn, slug, exists) {
@@ -143,7 +154,7 @@ function openModal(f) {
     ${q ? `<dl class="qa-grid"><div><dt>QA</dt><dd>${q.passed}/${q.total}</dd></div><div><dt>Loudness</dt><dd>${q.lufs}</dd></div><div><dt>True peak</dt><dd>${q.tp}</dd></div></dl>` : ''}
     <div class="cta"><a class="btn primary sm" href="${f.video}" download="${esc(s.slug)}.mp4">Download MP4</a><button class="btn ghost sm" id="mRemix">Remix this</button></div>
     <p class="note" style="margin-top:12px">${f.sizeMB} MB · out/${esc(s.slug)}.mp4</p>`;
-  $('#mRemix').onclick = () => { closeModal(); useTemplate(s, false); go('#studio'); };
+  $('#mRemix').onclick = () => { closeModal(); useTemplate(s, false); go('#/create'); };
   $('#modal').hidden = false;
   $('#modalVideo').play().catch(() => {});
 }
@@ -170,17 +181,17 @@ function newAct(i, kind = 'towers') {
   return a;
 }
 
-function useTemplate(s, inPlace) {
+function useTemplate(s, inPlace, generated = false) {
   spec = structuredClone(s ?? blank());
   editing = inPlace ? spec.slug : null;
-  if (!inPlace && s) {
+  if (!inPlace && s && !generated) {
     spec.title = s.title;
     spec.slug = uniqueSlug(slugify(s.title) + '-remix');
     spec.seed = spec.slug;
   }
   touched = {};
   for (const [k, l] of lineEntries()) touched[k] = !!l.anchor && l.anchor !== autoAnchor(l.line);
-  $('#template').value = inPlace || !s ? '' : String(DATA.films.findIndex((f) => f.spec.slug === s.slug));
+  $('#template').value = inPlace || !s || generated ? '' : String(DATA.films.findIndex((f) => f.spec.slug === s.slug));
   pvAt = 0;
   buildForm();
 }
@@ -475,4 +486,159 @@ function toast(msg) {
   toastT = setTimeout(() => (t.hidden = true), 4200);
 }
 
-load().catch((e) => toast(`Could not reach the studio server: ${e.message}`));
+load()
+  .then(loadAgents)
+  .then(route)
+  .catch((e) => toast(`Could not reach the studio server: ${e.message}`));
+
+// ---------------------------------------------------------------- routing (#/, #/create, #/films, #/docs/<page>)
+function route() {
+  const h = location.hash.replace(/^#\/?/, '');
+  const [view, sub] = h ? h.split('/') : ['home'];
+  const v = ['create', 'films', 'docs'].includes(view) ? view : 'home';
+  for (const el of document.querySelectorAll('.view')) el.hidden = el.dataset.view !== v;
+  if (v === 'docs') for (const a of document.querySelectorAll('[data-doc]')) a.hidden = a.dataset.doc !== (sub || 'getting-started');
+  const here = v === 'docs' ? `#/docs/${sub || 'getting-started'}` : v === 'home' ? '#/' : `#/${v}`;
+  for (const a of document.querySelectorAll('.side-nav a')) a.getAttribute('href') === here ? a.setAttribute('aria-current', 'page') : a.removeAttribute('aria-current');
+  $('#side').classList.remove('open');
+  $('#menu').setAttribute('aria-expanded', 'false');
+  const hv = $('#heroVideo');
+  if (v === 'home') hv.play().catch(() => {});
+  else hv.pause();
+  if (!routing) window.scrollTo(0, 0);
+}
+let routing = false;
+window.addEventListener('hashchange', route);
+$('#menu').onclick = () => {
+  const open = $('#side').classList.toggle('open');
+  $('#menu').setAttribute('aria-expanded', String(open));
+};
+
+// ---------------------------------------------------------------- agents
+let AGENTS = {agents: [], selected: 'claude'};
+async function loadAgents() {
+  AGENTS = await api('/api/agents');
+  const cur = AGENTS.agents.find((a) => a.id === AGENTS.selected) ?? AGENTS.agents[0];
+  $('#agentPick').innerHTML = AGENTS.agents.map((a) => `<option value="${a.id}" ${a.id === cur?.id ? 'selected' : ''}>${esc(a.name)}${a.installed ? '' : ' (not found)'}</option>`).join('');
+  const st = $('#agentStatus');
+  st.className = `agent-status ${cur?.installed ? 'ok' : 'bad'}`;
+  st.textContent = cur?.builtin ? 'keyword draft, no agent' : cur?.installed ? 'found on PATH' : 'not installed: see Getting started';
+  $('#sideAgent').innerHTML = cur ? `<span class="dot ${cur.installed ? '' : 'off'}"></span>Writer: <b>${esc(cur.name)}</b>` : '';
+  $('#setupStatus').innerHTML = `<h3>On this computer</h3><div class="status-row">${AGENTS.agents
+    .filter((a) => !a.builtin)
+    .map((a) => `<span class="tag ${a.installed ? 'ok' : ''}">${a.installed ? '✓' : '–'} ${esc(a.name)}${a.installed ? '' : ' not found'}</span>`)
+    .join('')}<span class="tag ok">✓ studio server</span></div>`;
+  $('#agentList').innerHTML = AGENTS.agents
+    .map((a) => `<div class="agent ${a.id === cur?.id ? 'on' : ''}">
+      <h3>${esc(a.name)} <span class="tag ${a.installed ? 'ok' : 'fail'}">${a.builtin ? 'built in' : a.installed ? 'installed' : 'not found'}</span>${a.custom ? '<span class="tag">custom</span>' : ''}</h3>
+      <div class="btns">${a.id === cur?.id ? '<span class="tag ok">in use</span>' : `<button class="btn ghost sm" data-use="${a.id}">Use</button>`}${a.custom ? `<button class="btn ghost sm" data-del="${a.id}">Remove</button>` : ''}</div>
+      ${a.command ? `<code>${esc(a.command)}</code>` : '<code>No agent: drafts a spec from keywords in your question.</code>'}
+    </div>`)
+    .join('');
+}
+$('#agentPick').onchange = async (e) => {
+  await api('/api/agents', {method: 'POST', body: {selected: e.target.value}});
+  loadAgents();
+};
+$('#agentList').onclick = async (e) => {
+  const b = e.target.closest('button');
+  if (!b) return;
+  await api('/api/agents', {method: 'POST', body: b.dataset.use ? {selected: b.dataset.use} : {remove: b.dataset.del}});
+  loadAgents();
+};
+$('#customAgent').onsubmit = async (e) => {
+  e.preventDefault();
+  const fd = new FormData(e.target);
+  const name = String(fd.get('name')).trim();
+  const id = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 32) || 'custom';
+  try {
+    await api('/api/agents', {method: 'POST', body: {custom: {id, name, command: String(fd.get('command'))}}});
+    e.target.reset();
+    toast(`${name} added and selected`);
+    loadAgents();
+  } catch (err) {
+    toast(err.message);
+  }
+};
+
+// ---------------------------------------------------------------- build the acts from one prompt
+async function build(prompt) {
+  prompt = (prompt ?? $('#prompt').value).trim();
+  if (!prompt) return $('#prompt').focus();
+  $('#prompt').value = prompt;
+  const agent = AGENTS.agents.find((a) => a.id === $('#agentPick').value);
+  $('#building').hidden = false;
+  $('#buildingText').textContent = `${agent?.name ?? 'The writer'} is writing the acts… (Claude Code takes ~20 s; free opencode models can take a few minutes)`;
+  $('#build').disabled = true;
+  $('#composer').classList.add('dim');
+  $('#buildNote').textContent = '';
+  const t0 = Date.now();
+  try {
+    const r = await api('/api/generate', {method: 'POST', body: {prompt, agent: agent?.id}});
+    useTemplate(r.spec, false, true);
+    const secs = Math.round((Date.now() - t0) / 1000);
+    $('#buildNote').textContent = r.note
+      ? `${agent?.name} didn't answer, so this is an offline draft (${r.note}). Edit it or try again.`
+      : `Written by ${r.source} in ${secs}s. ${r.check.ok ? 'All checks pass: read it through, then render.' : 'Some checks need a fix below.'}`;
+  } catch (e) {
+    $('#buildNote').textContent = e.message;
+  } finally {
+    $('#building').hidden = true;
+    $('#build').disabled = false;
+    $('#composer').classList.remove('dim');
+  }
+}
+$('#build').onclick = () => build();
+$('#prompt').onkeydown = (e) => e.key === 'Enter' && build();
+$('#heroAsk').onsubmit = (e) => {
+  e.preventDefault();
+  const p = $('#heroPrompt').value.trim();
+  go('#/create');
+  if (p) build(p);
+  else $('#prompt').focus();
+};
+
+// ---------------------------------------------------------------- docs bits
+function renderTemplateDocs() {
+  $('#tplGrid').innerHTML = DATA.films
+    .map(({spec: s, poster}, i) => `<div class="tpl">
+      <div class="phone">${poster ? `<img src="${poster}" alt="" loading="lazy">` : ''}</div>
+      <div><h3>${esc(s.title)}</h3>
+        <ol>${s.acts.map((a, j) => `<li><b>Act ${j + 1}</b>${esc(KIND_INFO[a.kind]?.[0] ?? a.kind)}: ${esc(a.label)}</li>`).join('')}<li><b>End</b>${esc(s.end.title)}</li></ol>
+        <button class="btn primary sm" data-tpl="${i}">Use this template</button></div>
+    </div>`)
+    .join('');
+}
+$('#tplGrid').onclick = (e) => {
+  const b = e.target.closest('[data-tpl]');
+  if (!b) return;
+  useTemplate(DATA.films[+b.dataset.tpl].spec, false);
+  go('#/create');
+};
+$('#kindTable').innerHTML = Object.entries(KIND_INFO)
+  .map(([k, [name, what]]) => `<div class="kind-row"><h3>${name}<code>${k}</code></h3><p>${what}. ${KIND_MORE[k]}</p><span>${AMOUNT[k] ? `intensity ${AMOUNT[k][0]}–${AMOUNT[k][1]}` : 'no intensity'}</span></div>`)
+  .join('');
+for (const pre of document.querySelectorAll('pre.cmd')) {
+  const b = document.createElement('button');
+  b.className = 'copy';
+  b.type = 'button';
+  b.textContent = 'Copy';
+  b.onclick = async () => {
+    try {
+      await navigator.clipboard.writeText(pre.querySelector('code').textContent);
+      b.textContent = 'Copied';
+    } catch {
+      b.textContent = 'Select and copy';
+    }
+    setTimeout(() => (b.textContent = 'Copy'), 1600);
+  };
+  pre.append(b);
+}
+for (const tabs of document.querySelectorAll('[data-tabs]')) {
+  tabs.querySelector('.tab-bar').onclick = (e) => {
+    const b = e.target.closest('[data-tab]');
+    if (!b) return;
+    for (const x of tabs.querySelectorAll('[data-tab]')) x.setAttribute('aria-selected', String(x === b));
+    for (const p of tabs.querySelectorAll('[data-panel]')) p.hidden = p.dataset.panel !== b.dataset.tab;
+  };
+}

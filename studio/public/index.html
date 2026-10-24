@@ -12,154 +12,341 @@
 <link rel="icon" href="/cube.svg" type="image/svg+xml">
 </head>
 <body>
-<header class="nav">
-  <a class="brand" href="#top"><img src="/cube.svg" alt="" width="26" height="26"><span>Reel Studio</span></a>
-  <nav>
-    <a href="#films">Films</a>
-    <a href="#how">How it works</a>
-    <a href="#studio">Studio</a>
-  </nav>
-  <button class="pill" id="jobPill" hidden></button>
-</header>
+<div class="shell">
+  <aside class="side" id="side">
+    <div class="side-top">
+      <a class="brand" href="#/"><img src="/cube.svg" alt="" width="26" height="26"><span>Reel Studio</span></a>
+      <button class="icon menu" id="menu" aria-label="Menu" aria-expanded="false">Menu</button>
+    </div>
+    <nav class="side-nav" id="sideNav">
+      <p class="side-group">Workspace</p>
+      <a href="#/"><span>Home</span></a>
+      <a href="#/create"><span>Create</span></a>
+      <a href="#/films"><span>Films</span><em id="navFilms"></em></a>
+      <p class="side-group">Docs</p>
+      <a href="#/docs/getting-started"><span>Getting started</span></a>
+      <a href="#/docs/templates"><span>Start from a template</span></a>
+      <a href="#/docs/agents"><span>Connect an agent</span></a>
+      <a href="#/docs/acts"><span>Act library</span></a>
+      <a href="#/docs/cli"><span>Command line</span></a>
+      <a href="#/docs/troubleshooting"><span>Troubleshooting</span></a>
+      <div class="side-agent" id="sideAgent"></div>
+      <button class="pill" id="jobPill" hidden></button>
+    </nav>
+  </aside>
 
-<main id="top">
-  <section class="hero">
-    <div class="hero-sky" aria-hidden="true"></div>
-    <div class="hero-copy">
-      <h1>One sentence in.<br><em>A finished Reel out.</em></h1>
-      <p class="lede">Low-poly 3D “what if” films, rendered from code. Write the question. Reel Studio voices it, times every beat to the narration, builds the city in real three.js geometry and masters a 36-second vertical film that is ready to post. No AI video models. Every frame renders the same way twice.</p>
-      <div class="cta">
-        <a class="btn primary" href="#studio">Make a film</a>
-        <a class="btn ghost" href="#films">Watch the films</a>
+  <main class="main" id="main">
+    <!-- HOME -->
+    <section class="view" data-view="home">
+      <div class="hero">
+        <div class="hero-sky" aria-hidden="true"></div>
+        <div class="hero-copy">
+          <h1>One sentence in.<br><em>A finished Reel out.</em></h1>
+          <p class="lede">Low-poly 3D “what if” films, rendered from code. Type the question; your own coding agent (Claude Code or opencode) writes the acts, and the studio voices, times, builds and masters a 36-second vertical film. No API keys, no AI video.</p>
+          <form class="ask" id="heroAsk">
+            <input id="heroPrompt" placeholder="What if it rained for 40 days straight?" maxlength="200" aria-label="Your what-if question">
+            <button class="btn primary" type="submit">Build the acts</button>
+          </form>
+          <p class="ask-sub">New here? <a href="#/docs/getting-started">Get set up in six steps</a> · or <a href="#/docs/templates">start from a template</a></p>
+          <dl class="stats">
+            <div><dt>Films</dt><dd id="statFilms">–</dd></div>
+            <div><dt>QA checks</dt><dd id="statQa">–</dd></div>
+            <div><dt>Loudness</dt><dd>−14 LUFS</dd></div>
+            <div><dt>Format</dt><dd>1080×1920</dd></div>
+          </dl>
+        </div>
+        <div class="hero-phone">
+          <div class="phone big">
+            <video id="heroVideo" muted loop playsinline autoplay preload="auto"></video>
+            <button class="sound" id="heroSound" aria-label="Turn sound on">Sound off</button>
+          </div>
+          <span class="chip c1">30 fps · H.264 CRF 18</span>
+          <span class="chip c2">16/16 QA</span>
+          <span class="chip c3">frame-identical re-renders</span>
+        </div>
       </div>
-      <dl class="stats" id="stats">
-        <div><dt>Films</dt><dd id="statFilms">–</dd></div>
-        <div><dt>QA checks</dt><dd id="statQa">–</dd></div>
-        <div><dt>Loudness</dt><dd>−14 LUFS</dd></div>
-        <div><dt>Format</dt><dd>1080×1920</dd></div>
-      </dl>
-    </div>
-    <div class="hero-phone">
-      <div class="phone big">
-        <video id="heroVideo" muted loop playsinline autoplay preload="auto"></video>
-        <button class="sound" id="heroSound" aria-label="Turn sound on">Sound off</button>
+      <div class="page">
+        <h2 class="h2">How a film gets made</h2>
+        <ol class="steps">
+          <li><span>01</span><h3>Prompt</h3><p>One what-if question. Your CLI agent writes the title, three escalating acts, counters and a punchline.</p></li>
+          <li><span>02</span><h3>Voice</h3><p>edge-tts reads the script, paced so the narration lands 1.6 s before the cut. Or drop in your own recording.</p></li>
+          <li><span>03</span><h3>Align</h3><p>faster-whisper finds when every word is said and maps it back to the script's spelling.</p></li>
+          <li><span>04</span><h3>Cue</h3><p>Every cut, label and effect is timed from an anchor phrase, so a new voiceover re-times the whole film.</p></li>
+          <li><span>05</span><h3>Render</h3><p>Remotion draws the three.js city frame by frame. Seeded and deterministic: no clocks, no randomness.</p></li>
+          <li><span>06</span><h3>Master + QA</h3><p>−14 LUFS, true peak under −1.5 dBTP, then 16 checks: safe zones, cover, determinism.</p></li>
+        </ol>
       </div>
-      <span class="chip c1">30 fps · H.264 CRF 18</span>
-      <span class="chip c2">16/16 QA</span>
-      <span class="chip c3">frame-identical re-renders</span>
-    </div>
-  </section>
+    </section>
 
-  <section class="section" id="films">
-    <div class="section-head">
-      <p class="eyebrow">The library</p>
-      <h2>Every film is one entry in <code>ideas.json</code></h2>
-      <p class="sub">Hover to preview. Each one was made by editing a spec only; no code changed between them.</p>
-    </div>
-    <div class="grid" id="grid"></div>
-  </section>
+    <!-- CREATE -->
+    <section class="view" data-view="create">
+      <div class="page wide">
+        <header class="page-head">
+          <p class="crumb">Workspace / Create</p>
+          <h1 class="h1">Create a film</h1>
+        </header>
 
-  <section class="section how" id="how">
-    <div class="section-head">
-      <p class="eyebrow">The pipeline</p>
-      <h2>Six steps, one command</h2>
-    </div>
-    <ol class="steps">
-      <li><span>01</span><h3>Write</h3><p>A spec: the question, three acts, an ending. Each act picks one change from the library.</p></li>
-      <li><span>02</span><h3>Voice</h3><p>edge-tts reads the script, paced so the narration lands 1.6 s before the cut. Or drop in your own recording.</p></li>
-      <li><span>03</span><h3>Align</h3><p>faster-whisper finds when every word is said, then maps it back to the script's spelling.</p></li>
-      <li><span>04</span><h3>Cue</h3><p>Every cut, label and effect is timed from an anchor phrase, so a new voiceover re-times the whole film.</p></li>
-      <li><span>05</span><h3>Render</h3><p>Remotion draws the three.js city frame by frame. Seeded, deterministic, no clocks.</p></li>
-      <li><span>06</span><h3>Master + QA</h3><p>Two-pass loudnorm to −14 LUFS, true peak under −1.5 dBTP, then 16 checks: safe zones, cover, determinism.</p></li>
-    </ol>
-  </section>
-
-  <section class="section studio" id="studio">
-    <div class="section-head">
-      <p class="eyebrow">Studio</p>
-      <h2>Write a new film</h2>
-      <p class="sub">Start from a film you like or from scratch. The preview shows where the text lands inside the Reels safe zones.</p>
-    </div>
-
-    <div class="composer">
-      <form id="form" autocomplete="off">
-        <div class="bar">
-          <label class="inline">Start from
-            <select id="template"></select>
-          </label>
-          <span class="mode" id="mode"></span>
+        <div class="prompt-card">
+          <label class="prompt-label" for="prompt">Your question</label>
+          <div class="prompt-row">
+            <input id="prompt" class="prompt-input" placeholder="What if everyone quit their job on the same day?" maxlength="200">
+            <button class="btn primary" id="build" type="button">Build the acts</button>
+          </div>
+          <div class="prompt-foot">
+            <label class="inline">Writer <select id="agentPick"></select></label>
+            <span class="agent-status" id="agentStatus"></span>
+            <span class="spacer"></span>
+            <label class="inline">Or start from <select id="template"></select></label>
+          </div>
+          <div class="building" id="building" hidden><i></i><span id="buildingText">Writing the acts…</span></div>
+          <p class="note" id="buildNote"></p>
         </div>
 
-        <fieldset class="card">
-          <legend><b>1</b> The question</legend>
-          <input class="title-input" id="title" placeholder="What if it snowed for a month?" maxlength="80">
-          <div class="row">
-            <div class="field grow"><span>Accent</span><div class="swatches" id="accents"></div></div>
-            <div class="field grow"><span>Weather</span><div class="tiles" id="weather"></div></div>
-          </div>
-          <div class="row">
-            <label class="field"><span>Voice</span><select id="voice"></select></label>
-            <label class="field small"><span>Seconds</span><input id="duration" type="number" min="20" max="60" step="1"></label>
-            <label class="toggle"><input type="checkbox" id="hero"><i></i><span>Put Darsh in it</span></label>
-          </div>
-          <details class="adv"><summary>File name and seed</summary>
-            <div class="row">
-              <label class="field grow"><span>Slug</span><input id="slug" spellcheck="false"></label>
-              <label class="field grow"><span>Seed</span><input id="seed" spellcheck="false"></label>
+        <div class="composer" id="composer">
+          <form id="form" autocomplete="off">
+            <div class="bar"><span class="mode" id="mode"></span></div>
+            <fieldset class="card">
+              <legend><b>1</b> The question</legend>
+              <input class="title-input" id="title" placeholder="What if it snowed for a month?" maxlength="80">
+              <div class="row">
+                <div class="field grow"><span>Accent</span><div class="swatches" id="accents"></div></div>
+                <div class="field grow"><span>Weather</span><div class="tiles" id="weather"></div></div>
+              </div>
+              <div class="row">
+                <label class="field"><span>Voice</span><select id="voice"></select></label>
+                <label class="field small"><span>Seconds</span><input id="duration" type="number" min="20" max="60" step="1"></label>
+                <label class="toggle"><input type="checkbox" id="hero"><i></i><span>Put Darsh in it</span></label>
+              </div>
+              <details class="adv"><summary>File name and seed</summary>
+                <div class="row">
+                  <label class="field grow"><span>Slug</span><input id="slug" spellcheck="false"></label>
+                  <label class="field grow"><span>Seed</span><input id="seed" spellcheck="false"></label>
+                </div>
+              </details>
+            </fieldset>
+            <fieldset class="card">
+              <legend><b>2</b> Opening line</legend>
+              <div class="line-field" data-line="intro"></div>
+            </fieldset>
+            <div class="acts" id="acts"></div>
+            <button type="button" class="btn ghost add" id="addAct">+ Add an act</button>
+            <fieldset class="card">
+              <legend><b id="endNo">4</b> Ending</legend>
+              <div class="line-field" data-line="end"></div>
+              <div class="row">
+                <label class="field grow"><span>End card title</span><input id="endTitle" maxlength="60"></label>
+                <label class="toggle"><input type="checkbox" id="rewind"><i></i><span>Rewind and loop</span></label>
+              </div>
+            </fieldset>
+          </form>
+
+          <aside class="preview">
+            <div class="sticky">
+              <div class="phone" id="pv">
+                <svg viewBox="0 0 1080 1920" preserveAspectRatio="none" id="pvArt" aria-hidden="true"></svg>
+                <div class="pv-title" id="pvTitle"></div>
+                <div class="pv-counter" id="pvCounter"><b></b><span></span></div>
+                <div class="pv-zones" id="pvZones"><i class="z-top"></i><i class="z-bottom"></i><i class="z-rail"></i></div>
+              </div>
+              <div class="scrub" id="scrub"></div>
+              <label class="toggle tiny"><input type="checkbox" id="zones" checked><i></i><span>Show Reels dead zones</span></label>
+              <div class="meter"><div class="meter-bar"><i id="meterFill"></i></div><span id="meterText"></span></div>
+              <ul class="issues" id="issues"></ul>
+              <div class="actions">
+                <label class="toggle tiny"><input type="checkbox" id="keepVo"><i></i><span>Reuse the last voiceover</span></label>
+                <button class="btn ghost" id="save" type="button">Save spec</button>
+                <button class="btn primary" id="saveRender" type="button">Save and render</button>
+              </div>
+              <p class="note" id="saveNote"></p>
             </div>
-          </details>
-        </fieldset>
-
-        <fieldset class="card">
-          <legend><b>2</b> Opening line</legend>
-          <div class="line-field" data-line="intro"></div>
-        </fieldset>
-
-        <div class="acts" id="acts"></div>
-        <button type="button" class="btn ghost add" id="addAct">+ Add an act</button>
-
-        <fieldset class="card">
-          <legend><b id="endNo">4</b> Ending</legend>
-          <div class="line-field" data-line="end"></div>
-          <div class="row">
-            <label class="field grow"><span>End card title</span><input id="endTitle" maxlength="60"></label>
-            <label class="toggle"><input type="checkbox" id="rewind"><i></i><span>Rewind and loop</span></label>
-          </div>
-        </fieldset>
-      </form>
-
-      <aside class="preview">
-        <div class="sticky">
-          <div class="phone" id="pv">
-            <svg viewBox="0 0 1080 1920" preserveAspectRatio="none" id="pvArt" aria-hidden="true"></svg>
-            <div class="pv-title" id="pvTitle"></div>
-            <div class="pv-counter" id="pvCounter"><b></b><span></span></div>
-            <div class="pv-zones" id="pvZones"><i class="z-top"></i><i class="z-bottom"></i><i class="z-rail"></i></div>
-          </div>
-          <div class="scrub" id="scrub"></div>
-          <label class="toggle tiny"><input type="checkbox" id="zones" checked><i></i><span>Show Reels dead zones</span></label>
-          <div class="meter"><div class="meter-bar"><i id="meterFill"></i></div><span id="meterText"></span></div>
-          <ul class="issues" id="issues"></ul>
-          <div class="actions">
-            <label class="toggle tiny"><input type="checkbox" id="keepVo"><i></i><span>Reuse the last voiceover</span></label>
-            <button class="btn ghost" id="save" type="button">Save spec</button>
-            <button class="btn primary" id="saveRender" type="button">Save and render</button>
-          </div>
-          <p class="note" id="saveNote"></p>
+          </aside>
         </div>
-      </aside>
-    </div>
-  </section>
-</main>
+      </div>
+    </section>
 
-<footer class="foot">
-  <p><b>Reel Studio</b> runs locally on 127.0.0.1. Nothing is uploaded or posted. Voice is an edge-tts placeholder; music and effects are synthesized.</p>
-  <p>Remotion · three.js · faster-whisper · ffmpeg. Audio DSP adapted from <a href="https://github.com/goodnight000/cstack">cstack</a> (MIT).</p>
-</footer>
+    <!-- FILMS -->
+    <section class="view" data-view="films">
+      <div class="page wide">
+        <header class="page-head">
+          <p class="crumb">Workspace / Films</p>
+          <h1 class="h1">Films</h1>
+          <p class="sub">Every film is one entry in <code>ideas.json</code>. Hover to preview, click to watch.</p>
+        </header>
+        <div class="grid" id="grid"></div>
+      </div>
+    </section>
+
+    <!-- DOCS -->
+    <section class="view docs" data-view="docs">
+      <div class="page doc">
+        <article data-doc="getting-started">
+          <p class="crumb">Docs / Getting started</p>
+          <h1 class="h1">Getting started</h1>
+          <p class="sub">Six steps from a fresh Windows machine to your first rendered Reel. Commands are PowerShell; run them one at a time. Writing the acts uses a coding agent you are already logged into (Claude Code or opencode): no API keys.</p>
+          <div class="status-box" id="setupStatus"></div>
+
+          <ol class="doc-steps">
+            <li>
+              <h2>Install the tools</h2>
+              <p>Node.js runs the studio and the renderer, Python runs the voice and alignment, FFmpeg masters the audio. Skip anything you already have.</p>
+              <pre class="cmd"><code>winget install OpenJS.NodeJS.LTS
+winget install Python.Python.3.12
+winget install Gyan.FFmpeg
+winget install Git.Git</code></pre>
+              <p>Open a new terminal so the new commands are on <code>PATH</code>, then check:</p>
+              <pre class="cmd"><code>node -v; py -3.12 --version; ffmpeg -version; git --version</code></pre>
+            </li>
+            <li>
+              <h2>Get the code</h2>
+              <pre class="cmd"><code>git clone https://github.com/Darshmello/Reel-Maker.git
+cd Reel-Maker
+npm ci</code></pre>
+              <p><code>npm ci</code> installs the exact pinned versions from <code>package-lock.json</code> (Remotion, three.js, React).</p>
+            </li>
+            <li>
+              <h2>Set up the Python tools</h2>
+              <pre class="cmd"><code>py -3.12 -m venv .venv
+.venv\Scripts\python -m pip install -r scripts/requirements.txt</code></pre>
+              <p>This installs edge-tts (the placeholder voice), faster-whisper (word timing) and numpy/scipy (the sound mix). The first alignment downloads a ~250 MB speech model once.</p>
+            </li>
+            <li>
+              <h2>Connect a writer agent</h2>
+              <p>The agent turns your one-line question into the full spec: title, three acts, counters and a punchline. Pick one; you can switch any time on the Create page.</p>
+              <div class="tabs" data-tabs>
+                <div class="tab-bar" role="tablist">
+                  <button role="tab" aria-selected="true" data-tab="cc">Claude Code</button>
+                  <button role="tab" aria-selected="false" data-tab="oc">opencode</button>
+                  <button role="tab" aria-selected="false" data-tab="other">Something else</button>
+                </div>
+                <div class="tab" data-panel="cc">
+                  <p><b>1. Install.</b> The native installer (recommended):</p>
+                  <pre class="cmd"><code>irm https://claude.ai/install.ps1 | iex</code></pre>
+                  <p>or with npm:</p>
+                  <pre class="cmd"><code>npm install -g @anthropic-ai/claude-code</code></pre>
+                  <p><b>2. Log in.</b> Run it once and sign in with your Claude account in the browser window it opens.</p>
+                  <pre class="cmd"><code>claude</code></pre>
+                  <p><b>3. Test it headless.</b> This is exactly how the studio calls it:</p>
+                  <pre class="cmd"><code>claude -p "Reply with OK"</code></pre>
+                  <p class="tip">The studio runs <code>claude -p</code> with tools, MCP servers and settings turned off, in an empty temp folder, using the Sonnet model. It can't touch your files. Each build is one or two short requests on your own plan.</p>
+                </div>
+                <div class="tab" data-panel="oc" hidden>
+                  <p><b>1. Install.</b></p>
+                  <pre class="cmd"><code>npm install -g @opencode/cli</code></pre>
+                  <p><b>2. Choose a model provider.</b> opencode ships with free models; to use your own subscription, log in to a provider:</p>
+                  <pre class="cmd"><code>opencode auth login</code></pre>
+                  <p><b>3. Test it headless.</b></p>
+                  <pre class="cmd"><code>opencode run "Reply with OK"</code></pre>
+                  <p class="tip">The studio writes the brief to a temp file and runs <code>opencode run -f brief.md …</code> in that temp folder, then reads the JSON from the reply. Pick a model with <code>-m provider/model</code> by editing the command under <a href="#/docs/agents">Connect an agent</a>.</p>
+                </div>
+                <div class="tab" data-panel="other" hidden>
+                  <p>Any CLI that takes a prompt and prints text works: Codex CLI and Gemini CLI are preset, and you can add your own command. See <a href="#/docs/agents">Connect an agent</a>.</p>
+                  <p>No agent at all? The <b>Offline draft</b> writer fills in a rough spec from keywords so you can still edit and render.</p>
+                </div>
+              </div>
+            </li>
+            <li>
+              <h2>Start the studio</h2>
+              <pre class="cmd"><code>npm run studio</code></pre>
+              <p>Then open <a href="http://127.0.0.1:4321">http://127.0.0.1:4321</a>. The server only listens on this computer and only answers its own page. The box at the top of this guide turns green for each agent it finds.</p>
+            </li>
+            <li>
+              <h2>Make your first film</h2>
+              <p>Go to <a href="#/create">Create</a>, type a question and press <b>Build the acts</b>. Read what the agent wrote, change anything you like (the preview shows where text lands inside the Reels safe zones), then <b>Save and render</b>. A render takes about five minutes and ends with 16 QA checks. The film lands in <code>out\&lt;slug&gt;.mp4</code> and on the <a href="#/films">Films</a> page.</p>
+              <a class="btn primary" href="#/create">Open Create</a>
+            </li>
+          </ol>
+          <div class="callout">
+            <h3>Prefer not to write a prompt?</h3>
+            <p>Start from one of the finished films and change only what you want.</p>
+            <a class="btn ghost sm" href="#/docs/templates">Start from a template →</a>
+          </div>
+        </article>
+
+        <article data-doc="templates" hidden>
+          <p class="crumb">Docs / Start from a template</p>
+          <h1 class="h1">Start from a template</h1>
+          <p class="sub">The second way in: every finished film is a template. Pick one, and Create opens with its acts, counters and timing already filled in under a new name. Change the question, a line or a counter, and render.</p>
+          <div class="tpl-grid" id="tplGrid"></div>
+        </article>
+
+        <article data-doc="agents" hidden>
+          <p class="crumb">Docs / Connect an agent</p>
+          <h1 class="h1">Connect an agent</h1>
+          <p class="sub">A writer is any command-line agent you are already logged into. The studio sends it a brief (the rules of the format, the act library, a worked example and your question) and reads one JSON spec back. Nothing here uses an API key.</p>
+          <div class="agent-list" id="agentList"></div>
+          <h2 class="h2s">How a command runs</h2>
+          <ul class="doc-list">
+            <li>It runs in a fresh, empty temp folder that is deleted afterwards.</li>
+            <li><code>{promptFile}</code> in the command becomes the path of a file holding the brief. Without it, the brief is piped to the command's stdin.</li>
+            <li>The first JSON object in the output with an <code>acts</code> field is taken as the spec. If it fails the checks, the agent gets one retry with the errors listed.</li>
+            <li>If the agent is missing or fails, the Offline draft writer is used and the Create page says why.</li>
+          </ul>
+          <h2 class="h2s">Add your own</h2>
+          <form class="custom-agent" id="customAgent">
+            <label class="field"><span>Name</span><input name="name" placeholder="opencode (GPT)" required></label>
+            <label class="field"><span>Command</span><input name="command" placeholder='opencode run -m openai/gpt-5 -f {promptFile} "Follow the brief in the attached file."' required spellcheck="false"></label>
+            <button class="btn primary sm" type="submit">Add and use</button>
+          </form>
+          <p class="note">Saved to <code>studio/agents.local.json</code> on this machine (not committed).</p>
+        </article>
+
+        <article data-doc="acts" hidden>
+          <p class="crumb">Docs / Act library</p>
+          <h1 class="h1">Act library</h1>
+          <p class="sub">Each act shows exactly one change to the city. Kinds can repeat with rising intensity; act three should be the biggest.</p>
+          <div class="kind-table" id="kindTable"></div>
+        </article>
+
+        <article data-doc="cli" hidden>
+          <p class="crumb">Docs / Command line</p>
+          <h1 class="h1">Command line</h1>
+          <p class="sub">Everything the studio does is a script you can run yourself.</p>
+          <h2 class="h2s">Render one film</h2>
+          <pre class="cmd"><code>powershell -ExecutionPolicy Bypass -File scripts/render.ps1 &lt;slug&gt;</code></pre>
+          <p>Add <code>-KeepVo</code> to reuse the last voiceover, or <code>-SkipRender</code> to re-master an existing render.</p>
+          <h2 class="h2s">Render everything</h2>
+          <pre class="cmd"><code>powershell -ExecutionPolicy Bypass -File scripts/batch.ps1
+powershell -ExecutionPolicy Bypass -File scripts/batch.ps1 -Only snow-month,rain-40-days</code></pre>
+          <h2 class="h2s">QA only</h2>
+          <pre class="cmd"><code>.venv\Scripts\python scripts/qa.py &lt;slug&gt;</code></pre>
+          <h2 class="h2s">Use your own voice</h2>
+          <p>Record the script and save it as <code>public/vo/&lt;slug&gt;.user.wav</code> (or .mp3/.m4a). The next render aligns to it and re-times every cut.</p>
+          <h2 class="h2s">Pipeline</h2>
+          <ol class="doc-list">
+            <li><code>make_vo.py</code>: placeholder voice, paced to end 1.6 s before the cut</li>
+            <li><code>align.py</code>: word timings → <code>out/&lt;slug&gt;/words.json</code></li>
+            <li><code>dump-events.mjs</code>: resolves every cue with <code>src/film/beats.ts</code></li>
+            <li><code>mix.py</code>: voice, ducked music bed and effects</li>
+            <li>Remotion render → two-pass loudnorm → <code>+faststart</code></li>
+            <li><code>qa.py</code>: 16 checks</li>
+          </ol>
+        </article>
+
+        <article data-doc="troubleshooting" hidden>
+          <p class="crumb">Docs / Troubleshooting</p>
+          <h1 class="h1">Troubleshooting</h1>
+          <dl class="faq">
+            <dt>“cue … is said 2 times”</dt><dd>An anchor phrase appears twice in the script. Make it longer (three words) or reword one line.</dd>
+            <dt>“script is N words; 36 s fits about M”</dt><dd>The voice can't fit. Cut words; the voice speeds up at most 24% before giving up.</dd>
+            <dt>The writer fell back to Offline draft</dt><dd>The note under the prompt says why. Run the agent's test command from Getting started in a terminal; it usually needs a login.</dd>
+            <dt>opencode is slow</dt><dd>Free models can take a minute or more. Give it a faster model with <code>-m</code> in a custom command.</dd>
+            <dt>QA fails “true peak”</dt><dd>Re-master without re-rendering: <code>scripts/render.ps1 &lt;slug&gt; -SkipRender</code>.</dd>
+            <dt>The page is blank</dt><dd>The studio server stopped. Run <code>npm run studio</code> again.</dd>
+          </dl>
+        </article>
+      </div>
+    </section>
+
+    <footer class="foot">
+      <p><b>Reel Studio</b> runs locally on 127.0.0.1. Nothing is uploaded or posted. Voice is an edge-tts placeholder; music and effects are synthesized.</p>
+      <p>Remotion · three.js · faster-whisper · ffmpeg. Audio DSP adapted from <a href="https://github.com/goodnight000/cstack">cstack</a> (MIT).</p>
+    </footer>
+  </main>
+</div>
 
 <div class="dock" id="dock" hidden>
   <div class="dock-head">
-    <div><p class="eyebrow" id="dockState">Rendering</p><h3 id="dockTitle"></h3></div>
+    <div><p class="eyebrow" id="dockState">Rendering</p><p class="dock-title" id="dockTitle"></p></div>
     <div class="dock-time" id="dockTime">0:00</div>
     <button class="icon" id="dockLog" aria-label="Show log">Log</button>
     <button class="icon" id="dockClose" aria-label="Hide">×</button>

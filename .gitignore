@@ -8,3 +8,4 @@ public/vo/*.wav
 src/film/*.tmp
 __pycache__/
 .impeccable/hook.cache.json
+studio/agents.local.json

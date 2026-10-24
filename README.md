@@ -24,10 +24,18 @@ Remotion from code: deterministic, re-renderable, batchable. No AI video models,
 npm run studio      # then open http://127.0.0.1:4321
 ```
 
-A local page (no dependencies, bound to 127.0.0.1) over the same pipeline: watch every film with its
-QA results, edit or remix a spec in a form with a live 9:16 safe-zone preview, check anchors and
-script length before rendering, and start a render with a progress dock and log. It reads and writes
-`ideas.json` and runs `scripts/render.ps1`, one render at a time. Code: `studio/`.
+A local dashboard (no dependencies, bound to 127.0.0.1) over the same pipeline:
+
+- **Create:** type one question and press *Build the acts*. A CLI coding agent you are already
+  logged into writes the whole spec (title, three acts, counters, punchline): Claude Code
+  (`claude -p`) or opencode (`opencode run`) out of the box, Codex/Gemini or any custom command via
+  `studio/agents.json` / `agents.local.json`. No API keys. Then edit it with a live 9:16 safe-zone
+  preview, and save and render with a progress dock.
+- **Films:** every film with its QA results; edit, remix or re-render.
+- **Docs:** step-by-step setup (Claude Code and opencode), start from a template, connecting agents,
+  the act library, command line, troubleshooting.
+
+It reads and writes `ideas.json` and runs `scripts/render.ps1`, one render at a time. Code: `studio/`.
 
 ## Make a film
 
