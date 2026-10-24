@@ -1,3 +1,5 @@
+# Adapted from cstack (https://github.com/goodnight000/cstack), skills/animated-video/templates/remotion-film/audio/dsp.py.
+# Copyright (c) 2026 Charles Zheng. MIT License: https://github.com/goodnight000/cstack/blob/main/LICENSE
 # Small synthesis toolkit for designed sound effects and a score. numpy + scipy (+ ffmpeg for read/loudness).
 # Everything is stereo float arrays of shape (n, 2) at SR unless a name says mono.
 import json, os, subprocess, wave

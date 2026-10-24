@@ -58,3 +58,9 @@ py -V:Astral\CPython3.12.12 -m venv .venv   # any Python 3.11/3.12
 ```
 
 Rules for editing (determinism, safe zones, palette) are in `CLAUDE.md`.
+
+## Credits
+
+- `scripts/dsp.py` is adapted from [cstack](https://github.com/goodnight000/cstack) (MIT License,
+  Copyright (c) 2026 Charles Zheng). The workflow (stills board, VO-timed cues, QA) follows cstack's
+  `animated-video` skill.
