@@ -3,6 +3,12 @@
 One sentence in, a 1080x1920 low-poly "what if" Reel out. Every frame is three.js geometry drawn by
 Remotion from code: deterministic, re-renderable, batchable. No AI video models, no Blender.
 
+## Where this lives
+
+- **Local working copy:** `C:\Users\darsh\reels-studio` (Darsh's Windows PC). Rendered films are in
+  `out\` there; they are not in git (`out/` is ignored) and re-render identically from this code.
+- **GitHub:** https://github.com/Darshmello/Reel-Maker (code only: no videos, VO audio, `node_modules` or `.venv`).
+
 ## Audio is a placeholder
 
 - **Voiceover:** generated with edge-tts (Microsoft neural voices, free, no key) by
