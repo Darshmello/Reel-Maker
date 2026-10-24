@@ -10,7 +10,7 @@ import {listSets} from '../scripts/sets-registry.mjs';
 
 export const KIND_RANGE = {towers: [5, 40], rockets: [1, 20], water: [0.1, 1.2], crowd: [100, 6000], snow: [0.1, 1], rain: [0.05, 1]};
 const KIND_DEFAULT = {towers: [30, 30, 40], rockets: [6, 10, 14], water: [0.42, 0.8, 1.1], crowd: [700, 2200, 5000], snow: [0.45, 1, 1], rain: [0.15, 0.55, 0.85]};
-const CAMS = [{x: -0.35, z: 10.5}, {x: 0.6, z: 11}, {x: 0, z: 14}, {x: 0.3, z: 12.5}];
+const CAMS = [{x: -0.35, z: 10.5}, {x: 0.6, z: 11}, {x: 0, z: 14}, {x: 0.3, z: 12.5}, {x: -0.7, z: 15}];
 const VOICES = ['en-US-AndrewNeural', 'en-US-AriaNeural', 'en-US-GuyNeural', 'en-US-JennyNeural', 'en-GB-RyanNeural', 'en-GB-SoniaNeural', 'en-AU-NatashaNeural'];
 const KINDS = ['towers', 'blackout', 'rockets', 'water', 'crowd', 'snow', 'rain'];
 
@@ -73,7 +73,7 @@ Camera. Each act's single move ends on a shot (same long lens, so it always read
 Give each act the shot that sells its change, vary them across the acts, and save aerial or wide for the
 biggest act. hero is false unless the idea is about Darsh: never put him in a film just because a set has room.`;
 
-const SYSTEM = `You write plans (specs) for 36-second vertical "what if" Reels. Every film shows one low-poly pastel 3D
+const SYSTEM = `You write plans (specs) for 20-75 second vertical "what if" Reels. Every film shows one low-poly pastel 3D
 diorama (the set: a city, a desert town, an island...) from one slowly moving camera, with one landmark painted
 in the accent colour. A calm narrator reads the script.
 The film opens on the question, runs one to five acts that escalate in time and scale, and ends on a dry punchline.
@@ -208,13 +208,31 @@ export const runAgent = (agent, text, {ms = 240000, test, cwd, command, onLog = 
       onLog('error', message);
       bad(new Error(message));
     }, ms);
-    const pump = (kind) => (d) => {
-      for (const line of ansi(d).split(/\r?\n/)) if (line.trim()) onLog(kind, line.trim().slice(0, 400));
+    const pump = (kind) => {
+      let pend = '';
+      const send = (line) => {
+        if (line.trim()) onLog(kind, line.trim().slice(0, 400));
+      };
+      return {
+        data: (d) => {
+          pend += ansi(d);
+          const parts = pend.split(/\r?\n/);
+          pend = parts.pop() ?? '';
+          for (const l of parts) send(l);
+        },
+        flush: () => {
+          if (pend.trim()) send(pend);
+          pend = '';
+        },
+      };
     };
-    p.stdout.on('data', (d) => { out += d; pump('stdout')(d); });
-    p.stderr.on('data', (d) => { err += d; pump('stderr')(d); });
-    p.on('error', (e) => (done(), onLog('error', e.message), bad(e)));
+    const o = pump('stdout'), e = pump('stderr');
+    p.stdout.on('data', (d) => { out += d; o.data(d); });
+    p.stderr.on('data', (d) => { err += d; e.data(d); });
+    p.on('error', (ev) => (done(), onLog('error', ev.message), bad(ev)));
     p.on('close', (code) => {
+      o.flush();
+      e.flush();
       done();
       const secs = ((Date.now() - started) / 1000).toFixed(1);
       onLog('exit', `exit ${code} after ${secs}s · stdout ${out.length} chars · stderr ${err.length} chars`);
@@ -241,7 +259,7 @@ const slugify = (t) => t.toLowerCase().replace(/^what if\s+/, '').replace(/[^a-z
 const clamp = (v, [a, b]) => Math.min(b, Math.max(a, v));
 const wordsIn = (s) => [s.intro, ...(s.acts ?? []), s.end].reduce((n, l) => n + (String(l?.line ?? '').match(/\S+/g)?.length ?? 0), 0);
 // the script decides the length: edge-tts reads ~2.6 words/s; one gap per line + head and tail (see make_vo.py)
-export const durationFor = (words, lines) => clamp(Math.ceil(2.8 + words / 2.6 + Math.max(0, lines - 1) * 0.9), [20, 75]);
+export const durationFor = (words, lines) => clamp(Math.ceil(2.8 + words / 2.6 + Math.max(0, lines - 1) * 0.9), [16, 75]);
 const clean = (s, max) => String(s ?? '').replace(/\s+/g, ' ').trim().slice(0, max);
 
 // mechanical fields the writer never decides
@@ -256,7 +274,11 @@ const finish = (g, slugs) => {
     if (a.counter.suffix) c.suffix = a.counter.suffix;
     const shot = SHOTS[a.shot] ? a.shot : 'standard';
     const act = {kind: a.kind, anchor: a.anchor.replace(/[^\p{L}\p{N}'\s-]/gu, '').trim(), label: a.label, line: a.line, counter: c, shot, cam: {...CAMS[i % CAMS.length], ...SHOTS[shot]}};
-    if (KIND_RANGE[a.kind]) act.amount = clamp(a.amount ?? KIND_DEFAULT[a.kind][Math.min(i, 2)], KIND_RANGE[a.kind]);
+    if (KIND_RANGE[a.kind]) {
+      // acts 4-5 of a repeated kind must still escalate past the third default
+      const fallback = i < 3 ? KIND_DEFAULT[a.kind][i] : Math.round(KIND_DEFAULT[a.kind][2] * (1 + (i - 2) * 0.35));
+      act.amount = clamp(a.amount ?? fallback, KIND_RANGE[a.kind]);
+    }
     if (a.why) act.why = clean(a.why, 240);
     return act;
   });
@@ -318,13 +340,24 @@ export async function generate(prompt, {validate, slugs, agentId, onLog = () => 
   let note = null;
   if (agent && !agent.builtin) {
     try {
-      let spec = finish(await runAgent(agent, brief(ask), {ms, onLog}), slugs);
-      let v = validate(spec);
+      const shape = (g) => {
+        // a writer can return JSON that parses but misses a required block; treat that as a failed
+        // draft (and ask again) instead of throwing past the retry and losing a good script
+        try {
+          return {spec: finish(g, slugs), v: null};
+        } catch (e) {
+          return {spec: null, v: {ok: false, errors: [`the plan is incomplete: ${e.message}`], cues: []}};
+        }
+      };
+      let {spec, v} = shape(await runAgent(agent, brief(ask), {ms, onLog}));
+      v ??= validate(spec);
       if (!v.ok) {
         onLog('check', `first draft failed ${v.errors.length} check(s), asking for a fix: ${v.errors.join('; ').slice(0, 300)}`);
-        spec = finish(await runAgent(agent, brief(`${ask}\n\nA previous attempt failed these checks; fix them:\n- ${v.errors.join('\n- ')}\n\nPrevious attempt:\n${JSON.stringify(spec)}`), {ms, onLog}), slugs);
-        v = validate(spec);
+        const again = shape(await runAgent(agent, brief(`${ask}\n\nA previous attempt failed these checks; fix them:\n- ${v.errors.join('\n- ')}\n\nPrevious attempt:\n${JSON.stringify(spec ?? '(unreadable)')}`), {ms, onLog}));
+        spec = again.spec;
+        v = again.v ?? validate(spec);
       }
+      if (!spec) throw new Error(v.errors.join('; '));
       return {spec, check: v, source: agent.name};
     } catch (e) {
       note = String(e.message ?? e).slice(0, 400);

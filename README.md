@@ -26,8 +26,9 @@ npm run studio      # then open http://127.0.0.1:4321
 
 A local dashboard (no dependencies, bound to 127.0.0.1) over the same pipeline:
 
-- **Create:** type one question and press *Build the acts*. A CLI coding agent you are already
-  logged into writes the whole spec (title, three acts, counters, punchline): Claude Code
+- **Create:** describe the idea and press *Draft the plan*. A CLI coding agent you are already
+  logged into writes the whole spec (title, one to five acts, counters, punchline) and the studio
+  shows it for review first, with a live log of the command it ran: Claude Code
   (`claude -p`) or opencode (`opencode run`) out of the box, Codex/Gemini or any custom command via
   `studio/agents.json` / `agents.local.json`. No API keys. Then edit it with a live 9:16 safe-zone
   preview, and save and render with a progress dock.

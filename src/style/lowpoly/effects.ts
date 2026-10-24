@@ -134,13 +134,14 @@ const blackout = (acts: Act[], {city, seed}: Ctx): Effect => {
   farm.position.set(L.x, land, L.z);
   city.local.add(live(farm));
 
-  const act = acts[0];
+  // repeated blackout acts are one continuous switch-off: flatten every act's light schedule
+  const sched = acts.flatMap((a) => a.schedule);
   // seeded order in which lights go out
   const order = lights.map((_, i) => i).sort((a, b) => random(`${seed}:lo${a}`) - random(`${seed}:lo${b}`));
   const offAt = new Array(lights.length).fill(Infinity);
-  order.forEach((li, j) => (offAt[li] = act.schedule[j] ?? act.fxEnd));
+  order.forEach((li, j) => (offAt[li] = sched[j] ?? acts[acts.length - 1].fxEnd));
   const on = col(PALETTE.serverLight), dim = col(PALETTE.cloud), off = col(PALETTE.serverOff);
-  const powerDown = act.schedule[act.schedule.length - 1] + 10;
+  const powerDown = sched[sched.length - 1] + 10;
   return {
     update: (e) => {
       lights.forEach((_, i) => {
@@ -155,8 +156,10 @@ const blackout = (acts: Act[], {city, seed}: Ctx): Effect => {
 
 // ------------------------------------------------------- rockets: pads in the bay, launches
 const rockets = (acts: Act[], {city, seed, accent}: Ctx): Effect => {
-  const act = acts[0];
-  const n = act.schedule.length;
+  // every act of the kind launches its own batch: one rocket per scheduled frame
+  const runs = acts.flatMap((a) => a.schedule.map((fr) => ({fr, from: a.fxStart})));
+  const n = runs.length;
+  const firstFx = acts[0]?.fxStart ?? 0;
   // pads in world space in the set's pad band; spots the set rejects are skipped
   const pads: THREE.Vector3[] = [];
   const B = city.pads, step = (B.x1 - B.x0) / 3;
@@ -191,12 +194,12 @@ const rockets = (acts: Act[], {city, seed, accent}: Ctx): Effect => {
   const hide = mat4(0, -50, 0, 0.0001, 0.0001, 0.0001);
   return {
     update: (e) => {
-      const rise = smooth(c01((e - act.fxStart) / 20)); // pads and rockets come up out of the bay
+      const rise = smooth(c01((e - firstFx) / 20)); // pads and rockets come up out of the bay
       const padY = THREE.MathUtils.lerp(-0.7, 0, rise);
       pads.forEach((p, i) => {
-        const L0 = act.schedule[i];
+        const L0 = runs[i].fr;
         const age = e - L0;
-        const shown = e >= act.fxStart;
+        const shown = e >= runs[i].from;
         padMesh.setMatrixAt(i, shown ? mat4(p.x, padY, p.z) : hide);
         ringMesh.setMatrixAt(i, shown ? mat4(p.x, padY, p.z) : hide);
         const y = padY + 0.06 + alt(age);

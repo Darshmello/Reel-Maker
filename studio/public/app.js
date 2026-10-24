@@ -38,7 +38,7 @@ const KIND_MORE = {
 // camera shots (same table as src/kit/Camera.tsx SHOTS)
 const SHOTS = {standard: {}, wide: {h: 4.2, tilt: -11}, aerial: {h: 7.5, tilt: -25}, low: {h: 2.1, tilt: -4}, 'orbit-left': {yaw: 0.38}, 'orbit-right': {yaw: -0.38}};
 const SHOT_NAMES = {standard: 'Standard', wide: 'Wide', aerial: 'Aerial', low: 'Low', 'orbit-left': 'Orbit left', 'orbit-right': 'Orbit right'};
-const CAMS = [{x: -0.35, z: 10.5}, {x: 0.6, z: 11}, {x: 0, z: 14}, {x: 0.3, z: 12.5}];
+const CAMS = [{x: -0.35, z: 10.5}, {x: 0.6, z: 11}, {x: 0, z: 14}, {x: 0.3, z: 12.5}, {x: -0.7, z: 15}];
 const VOICES = ['en-US-AndrewNeural', 'en-US-AriaNeural', 'en-US-GuyNeural', 'en-US-JennyNeural', 'en-GB-RyanNeural', 'en-GB-SoniaNeural', 'en-AU-NatashaNeural'];
 
 let DATA = {films: [], palette: {accents: {}, weather: {}}, kinds: []};
@@ -186,6 +186,7 @@ function newAct(i, kind = 'towers') {
 }
 
 function useTemplate(s, inPlace, generated = false) {
+  if (!generated) $('#planCard').hidden = true; // a picked/remixed template is not the drafted plan
   spec = structuredClone(s ?? blank());
   editing = inPlace ? spec.slug : null;
   if (!inPlace && s && !generated) {
@@ -255,7 +256,7 @@ function buildActs() {
           <label class="field small"><span>Suffix</span><input data-c="suffix" value="${esc(a.counter.suffix ?? '')}" maxlength="8"></label>
           <label class="field small"><span>Decimals</span><input data-c="decimals" type="number" min="0" max="3" value="${a.counter.decimals ?? 0}"></label>
         </div></details>
-        ${am ? `<div class="field"><span>Intensity</span><div class="range"><input type="range" data-a="amount" min="${am[0]}" max="${am[1]}" step="${am[2]}" value="${a.amount ?? am[3][i]}"><output>${a.amount ?? am[3][i]}</output></div></div>` : ''}
+        ${am ? `<div class="field"><span>Intensity</span><div class="range"><input type="range" data-a="amount" min="${am[0]}" max="${am[1]}" step="${am[2]}" value="${a.amount ?? am[3][i] ?? am[3].at(-1)}"><output>${a.amount ?? am[3][i] ?? am[3].at(-1)}</output></div></div>` : ''}
       </fieldset>`;
     })
     .join('');
@@ -302,7 +303,7 @@ $('#form').addEventListener('input', (e) => {
     if (t.dataset.a === 'shot') {
       const i = +card.dataset.act;
       a.shot = t.value;
-      a.cam = {x: a.cam?.x ?? CAMS[i].x, z: a.cam?.z ?? CAMS[i].z, ...SHOTS[t.value]};
+      a.cam = {x: a.cam?.x ?? CAMS[i % CAMS.length].x, z: a.cam?.z ?? CAMS[i % CAMS.length].z, ...SHOTS[t.value]};
     }
     if (t.dataset.a === 'amount') { a.amount = +t.value; t.nextElementSibling.textContent = t.value; }
     if (t.dataset.c) {
@@ -325,7 +326,7 @@ $('#form').addEventListener('click', (e) => {
     const i = +b.closest('[data-act]').dataset.act;
     const a = spec.acts[i];
     a.kind = b.dataset.kind;
-    if (AMOUNT[a.kind]) a.amount = AMOUNT[a.kind][3][i];
+    if (AMOUNT[a.kind]) a.amount = AMOUNT[a.kind][3][i] ?? AMOUNT[a.kind][3].at(-1);
     else delete a.amount;
     pvAt = i + 1;
     buildActs();
@@ -430,6 +431,7 @@ function showCheck() {
 
 async function save() {
   const r = await api('/api/films', {method: 'POST', body: spec});
+  $('#planCard').hidden = true;
   editing = spec.slug;
   await load();
   updateMode();
@@ -598,6 +600,7 @@ $('#customAgent').onsubmit = async (e) => {
 
 // ---------------------------------------------------------------- draft a plan, review it, then generate
 let PLAN = null; // the last drafted spec, including the writer's plan/why notes
+let drafting = false; // one draft at a time: Ctrl+Enter and the hero form both land here
 let logStream = null;
 let logSeen = new Set();
 
@@ -630,6 +633,12 @@ function openLog(id) {
     if (ev.kind === 'parsed' || ev.kind === 'done') logState(ev.kind, 'done');
     if (ev.kind === 'error') logState('error', 'bad');
     if (ev.kind === 'fallback') logState('offline', 'bad');
+    if (ev.kind === 'done' || ev.kind === 'error') {
+      const mine = logStream;
+      setTimeout(() => {
+        if (logStream === mine) closeLog();
+      }, 400);
+    }
   };
   logStream.addEventListener('log', (e) => {
     try {
@@ -658,21 +667,31 @@ function setBuilding(on, text) {
 const draftId = () => `d${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
 
 async function build(prompt, direct = false) {
+  if (drafting) return; // a writer is already running; ignore the second submit
   prompt = (prompt ?? $('#prompt').value).trim();
-  if (!prompt) return $('#prompt').focus();
+  if (!prompt) {
+    toast('Write the brief first: a sentence or two about the idea.');
+    return $('#prompt').focus();
+  }
+  drafting = true;
   $('#prompt').value = prompt;
   const agent = AGENTS.agents.find((a) => a.id === $('#agentPick').value);
   const id = draftId();
   $('#planCard').hidden = true;
   $('#buildNote').textContent = '';
   openLog(id);
+  const myLog = logStream;
   setBuilding(true, `${agent?.name ?? 'The writer'} is drafting the plan… the log below is live: the command it ran and everything it prints.`);
   const t0 = Date.now();
   try {
     const r = await api('/api/generate', {method: 'POST', body: {prompt, agent: agent?.id, id}});
+    if (r.logId && r.logId !== id) {
+      closeLog();
+      openLog(r.logId);
+    }
     PLAN = r.spec;
     const secs = Math.round((Date.now() - t0) / 1000);
-    if ($('#autoSets').checked && r.spec.scene) startSets(r.spec.scene, +$('#variants').value, r.spec.slug, 'create');
+    if (direct && $('#autoSets').checked && r.spec.scene) startSets(r.spec.scene, +$('#variants').value, r.spec.slug, 'create');
     $('#buildNote').textContent = r.note
       ? `${agent?.name} didn't answer, so this is an offline draft (${r.note}). Review it, or draft again with another writer.`
       : `Planned by ${r.source} in ${secs}s. ${r.check.ok ? 'All checks pass — read the plan, then generate.' : 'Some checks need a fix; open it in the editor.'}`;
@@ -686,8 +705,12 @@ async function build(prompt, direct = false) {
   } catch (e) {
     $('#buildNote').textContent = e.message;
   } finally {
+    drafting = false;
     setBuilding(false);
-    closeLog();
+    // let the last SSE frames land even when the writer answered in milliseconds
+    setTimeout(() => {
+      if (logStream === myLog) closeLog();
+    }, 900);
   }
 }
 
@@ -737,8 +760,8 @@ function renderPlan({spec: s, check: c, source}) {
     </div>
     ${c.ok ? '' : `<ul class="issues">${(c.errors ?? []).slice(0, 8).map((e) => `<li>${esc(e)}</li>`).join('')}</ul>`}
     <div class="plan-actions">
-      <button class="btn primary" data-plan="go" type="button">Generate this film</button>
-      <button class="btn ghost" data-plan="edit" type="button">Open in the editor</button>
+      <button class="btn primary" data-plan="go" type="button" ${c.ok ? '' : 'disabled title="Fix the checks in the editor first"'}>Generate this film</button>
+      <button class="btn ghost${c.ok ? '' : ' primary'}" data-plan="edit" type="button">Open in the editor</button>
       <button class="btn ghost" data-plan="again" type="button">Draft again</button>
       <span class="spacer"></span>
       <span class="note">Generating saves it to ideas.json and starts the render (~15–20 min).</span>
@@ -751,16 +774,24 @@ $('#planCard').onclick = async (e) => {
   if (!b || !PLAN) return;
   const what = b.dataset.plan;
   if (what === 'edit') {
+    $('#planCard').hidden = true; // the composer owns the spec from here: Generate would undo hand edits
     useTemplate(PLAN, false, true);
     $('#buildNote').textContent = 'Editing the plan. Change any line, act or shot below, then Save and render.';
     $('#composer').scrollIntoView({behavior: 'smooth', block: 'start'});
     return;
   }
   if (what === 'again') {
+    const p = $('#prompt').value.trim();
+    if (!p) {
+      $('#buildNote').textContent = 'Write the brief again first — the box at the top is empty.';
+      return $('#prompt').focus();
+    }
     $('#planCard').hidden = true;
-    return build(null);
+    PLAN = null;
+    return build(p);
   }
   if (what === 'go') {
+    if (!PLAN) return;
     const label = b.textContent;
     b.disabled = true;
     b.textContent = 'Saving…';
@@ -768,6 +799,7 @@ $('#planCard').onclick = async (e) => {
       useTemplate(PLAN, false, true);
       await save();
       $('#planCard').hidden = true;
+      if ($('#autoSets').checked && PLAN.scene) startSets(PLAN.scene, +$('#variants').value, spec.slug, 'create');
       await startRender(spec.slug, $('#keepVo').checked);
     } catch (err) {
       toast(err.message);

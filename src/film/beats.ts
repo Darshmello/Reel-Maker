@@ -79,13 +79,18 @@ export const makeBeats = (spec: Spec, words: Word[]) => {
   const acts: Act[] = spec.acts.map((a, i) => {
     const start = starts[i];
     const end = i + 1 < starts.length ? starts[i + 1] : endStart;
-    const fxStart = start + 12;
-    const fxEnd = end - 12;
+    // keep the fx window inside the act even when an act is only a line or two long
+    const inset = Math.min(12, Math.max(0, Math.floor((end - start) / 4)));
+    const fxStart = start + inset;
+    const fxEnd = Math.max(fxStart + 1, end - inset);
     const n = Math.max(1, Math.round(a.amount ?? DEFAULT_AMOUNT[a.kind]));
     const items = a.kind === 'towers' ? Math.min(n, 40) : a.kind === 'blackout' ? 24 : a.kind === 'rockets' ? n : 0;
     const span = fxEnd - fxStart;
+    const rocketSpan = Math.max(0, span - 60);
+    const spread = rocketSpan > 0 ? rocketSpan : Math.max(0, Math.min(span - 1, 30));
+    const rocketStart = fxStart + Math.min(24, Math.max(0, span - 1 - spread));
     const schedule = Array.from({length: items}, (_, j) =>
-      a.kind === 'rockets' ? Math.round(fxStart + 24 + (j * (span - 60)) / Math.max(1, items - 1)) : Math.round(fxStart + (j * span * 0.8) / items),
+      a.kind === 'rockets' ? Math.round(rocketStart + (j * spread) / Math.max(1, items - 1)) : Math.round(fxStart + (j * span * 0.8) / items),
     );
     return {...a, i, start, end, fxStart, fxEnd, schedule};
   });

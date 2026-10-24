@@ -139,6 +139,11 @@ const pushLog = (id, kind, text) => {
   for (const s of logStreams) if (s.id === id) s.res.write(`event: log\ndata: ${JSON.stringify(ev)}\n\n`);
 };
 const logView = (id) => writerLog.get(id) ?? [];
+// drafts are one-shot: drop their buffers after 15 quiet minutes so a long studio session stays small
+setInterval(() => {
+  const cut = Date.now() - 15 * 60e3;
+  for (const [id, buf] of writerLog) if (!buf.length || buf[buf.length - 1].t < cut) writerLog.delete(id);
+}, 5 * 60e3).unref?.();
 
 const startRender = (slug, keepVo) => {
   const log = join(ROOT, 'out', `${slug}.studio.log`);
@@ -305,7 +310,7 @@ createServer(async (req, res) => {
       pushLog(logId, 'start', `plan requested: ${String(prompt).replace(/\s+/g, ' ').slice(0, 300)}`);
       try {
         const r = await generate(String(prompt).slice(0, 1200), {validate, slugs: readIdeas().map((s) => s.slug), agentId: agent, onLog: (k, t) => pushLog(logId, k, t)});
-        pushLog(logId, 'done', `${r.source}: ${r.spec.acts.length} act(s), ${r.spec.duration}s, ${r.check.words}/${r.check.budget} words${r.check.ok ? '' : `, ${r.check.errors.length} check(s) to fix`}`);
+        pushLog(logId, 'done', `${r.source}: ${r.spec.acts.length} act(s), ${r.spec.duration}s, ${r.check.words ?? '?'}/${r.check.budget ?? '?'} words${r.check.ok ? '' : `, ${r.check.errors.length} check(s) to fix`}`);
         return json(res, 200, {...r, logId});
       } catch (e) {
         pushLog(logId, 'error', e.message);

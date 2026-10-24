@@ -13,7 +13,7 @@ const ROOT = resolve(import.meta.dirname, '..');
 const SETS = join(ROOT, 'src', 'sets');
 const read = (p) => readFileSync(join(ROOT, p), 'utf8');
 
-const RULES = `You write set packs for a renderer of 36-second vertical "what if" Reels in a low-poly pastel 3D
+const RULES = `You write set packs for a renderer of 20-75 second vertical "what if" Reels in a low-poly pastel 3D
 diorama style (flat-shaded, soft, quiet, like a tilt-shift model). A set pack builds the stage one film plays on.
 The act library animates any set through the SetBuild contract: towers grow the pack's buildings, a server farm
 stands on its lot, rockets launch from its pad band, crowds fill its walk rects, snow covers its snow rects,

@@ -44,10 +44,10 @@
         <div class="hero-sky" aria-hidden="true"></div>
         <div class="hero-copy">
           <h1>One sentence in.<br><em>A finished Reel out.</em></h1>
-          <p class="lede">Low-poly 3D “what if” films, rendered from code. Type the question; your own coding agent (Claude Code or opencode) writes the acts, and the studio voices, times, builds and masters a 36-second vertical film. No API keys, no AI video.</p>
+          <p class="lede">Low-poly 3D “what if” films, rendered from code. Type the question; your own coding agent (Claude Code or opencode) writes the acts, and the studio voices, times, builds and masters a 20-75 second vertical film. No API keys, no AI video.</p>
           <form class="ask" id="heroAsk">
-            <input id="heroPrompt" placeholder="What if it rained for 40 days straight?" maxlength="200" aria-label="Your what-if question">
-            <button class="btn primary" type="submit">Build the acts</button>
+            <input id="heroPrompt" placeholder="What if it rained for 40 days straight?" maxlength="1200" aria-label="Your what-if question">
+            <button class="btn primary" type="submit">Draft the plan</button>
           </form>
           <p class="ask-sub">New here? <a href="#/docs/getting-started">Get set up in six steps</a> · or <a href="#/docs/templates">start from a template</a></p>
           <dl class="stats">
@@ -67,7 +67,7 @@
       <div class="page">
         <h2 class="h2">How a film gets made</h2>
         <ol class="steps">
-          <li><span>01</span><h3>Prompt</h3><p>One what-if question. Your CLI agent writes the title, three escalating acts, counters and a punchline.</p></li>
+          <li><span>01</span><h3>Prompt</h3><p>One what-if question. Your CLI agent writes the title, one to five escalating acts, counters and a punchline.</p></li>
           <li><span>02</span><h3>Voice</h3><p>edge-tts reads the script, paced so the narration lands 1.6 s before the cut. Or drop in your own recording.</p></li>
           <li><span>03</span><h3>Align</h3><p>faster-whisper finds when every word is said and maps it back to the script's spelling.</p></li>
           <li><span>04</span><h3>Cue</h3><p>Every cut, label and effect is timed from an anchor phrase, so a new voiceover re-times the whole film.</p></li>
@@ -278,7 +278,7 @@ npm ci</code></pre>
             </li>
             <li>
               <h2>Connect a writer agent</h2>
-              <p>The agent turns your one-line question into the full spec: title, three acts, counters and a punchline. Pick one; you can switch any time on the Create page.</p>
+              <p>The agent turns your one-line question into the full spec: title, one to five acts, counters and a punchline. Pick one; you can switch any time on the Create page.</p>
               <div class="tabs" data-tabs>
                 <div class="tab-bar" role="tablist">
                   <button role="tab" aria-selected="true" data-tab="cc">Claude Code</button>
@@ -318,7 +318,7 @@ npm ci</code></pre>
             </li>
             <li>
               <h2>Make your first film</h2>
-              <p>Go to <a href="#/create">Create</a>, type a question and press <b>Build the acts</b>. Read what the agent wrote, change anything you like (the preview shows where text lands inside the Reels safe zones), then <b>Save and render</b>. A render takes about five minutes and ends with 16 QA checks. The film lands in <code>out\&lt;slug&gt;.mp4</code> and on the <a href="#/films">Films</a> page.</p>
+              <p>Go to <a href="#/create">Create</a>, describe the idea in a sentence or two and press <b>Draft the plan</b>. The writer returns the narration, the place, one to five acts and the reason for each beat; the live log shows the exact CLI command and everything it prints. Review it, then <b>Generate this film</b> (or <b>Open in the editor</b> to change any line; the preview shows where text lands inside the Reels safe zones). A render takes 15-20 minutes and ends with 16 QA checks. The film lands in <code>out\&lt;slug&gt;.mp4</code> and on the <a href="#/films">Films</a> page.</p>
               <a class="btn primary" href="#/create">Open Create</a>
             </li>
           </ol>
@@ -427,7 +427,7 @@ node scripts/thumbs.mjs                      # re-render every set's two preview
           <h1 class="h1">Troubleshooting</h1>
           <dl class="faq">
             <dt>“cue … is said 2 times”</dt><dd>An anchor phrase appears twice in the script. Make it longer (three words) or reword one line.</dd>
-            <dt>“script is N words; 36 s fits about M”</dt><dd>The voice can't fit. Cut words; the voice speeds up at most 24% before giving up.</dd>
+            <dt>"script is N words; N s fits about M"</dt><dd>The voice can't fit. Cut words; the voice speeds up at most 24% before giving up.</dd>
             <dt>The writer fell back to Offline draft</dt><dd>The note under the prompt says why. Run the agent's test command from Getting started in a terminal; it usually needs a login.</dd>
             <dt>opencode is slow</dt><dd>Free models can take a minute or more. Give it a faster model with <code>-m</code> in a custom command.</dd>
             <dt>QA fails “true peak”</dt><dd>Re-master without re-rendering: <code>scripts/render.ps1 &lt;slug&gt; -SkipRender</code>.</dd>

@@ -57,19 +57,32 @@ def main(slug):
     target = spec['duration'] - TAIL
     lines = lines_of(spec)
     tmp = tempfile.mkdtemp()
-    # natural pace first; faster if the lines don't fit, slightly slower if they leave a long silence
-    for rate_pct in (0, 6, 12, 18, 24, -6, -10):
-        rate = f'{rate_pct:+d}%'
+
+    def speak(rate_pct):
         clips = []
         for i, line in enumerate(lines):
             mp3 = os.path.join(tmp, f'{i}_{rate_pct}.mp3')
-            asyncio.run(tts(line, spec['voice'], rate, mp3))
+            asyncio.run(tts(line, spec['voice'], f'{rate_pct:+d}%', mp3))
             clips.append(trim(pcm(mp3)))
+        return clips
+
+    # Natural pace first, then one pass at the rate that makes the lines fit with 0.35 s gaps.
+    # edge-tts' rate changes speech duration roughly as 1 / (1 + rate), so the guess is close and
+    # the gap absorbs the rest. (The old 6%-step search could fall through every rung and then
+    # compute a negative gap, which crashed on a negative-size bytes().)
+    clips = speak(0)
+    speech = sum(len(c) for c in clips) / 2 / SR
+    gaps = max(1, len(clips) - 1)
+    room = target - LEAD - 0.35 * gaps
+    rate_pct = max(-10, min(24, round((speech / room - 1) * 100))) if room > 0 else 24
+    if rate_pct != 0:
+        clips = speak(rate_pct)
         speech = sum(len(c) for c in clips) / 2 / SR
-        gap = (target - LEAD - speech) / (len(clips) - 1)
-        if 0.35 <= gap <= 1.8 or (rate_pct < 0 and gap >= 0.35):
-            break
-    gap = min(gap, 1.8)
+    gap = (target - LEAD - speech) / gaps
+    if gap < 0:
+        print(f'warning: {slug} is too long for {spec["duration"]}s even at +24%')
+    gap = max(0.0, min(1.8, gap))
+    rate = f'{rate_pct:+d}%'
     out = bytearray(int(LEAD * SR) * 2)
     for i, c in enumerate(clips):
         out += c
