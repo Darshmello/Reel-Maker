@@ -53,6 +53,7 @@ export type SetMeta = {
 };
 
 export type SetPack = {
+  sky?: {top: string; horizon: string}; // optional sky for the set (e.g. a black moon sky); else the film's weather
   hero: {x: number; z: number; yaw: number}; // world spot for the hero figure (sits on landY), facing +z turned by yaw
   build: (opts: SetOpts) => SetBuild;
 };

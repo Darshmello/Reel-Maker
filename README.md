@@ -32,6 +32,14 @@ A local dashboard (no dependencies, bound to 127.0.0.1) over the same pipeline:
   `studio/agents.json` / `agents.local.json`. No API keys. Then edit it with a live 9:16 safe-zone
   preview, and save and render with a progress dock.
 - **Films:** every film with its QA results; edit, remix or re-render.
+- **Sets:** the places films happen. Each set is a TypeScript pack in `src/sets/<id>/` (`index.ts`,
+  `palette.ts`, `meta.json`) built on `src/sets/kit.ts` against the `SetBuild` contract in
+  `src/sets/types.ts`, so every act (towers, blackout, rockets, water, crowd, snow, rain) works on it.
+  When Create writes a film, the writer also describes its scene and your agent builds new set packs for
+  it (1-3 variants), learning from the closest packs in the marketplace. Every pack is linted, typechecked
+  and rendered inside a probe film (`scripts/check-set.mjs`) before it can be picked. Packs can be written
+  by hand, pasted in, or shared as a folder / pull request. `node scripts/seed-sets.mjs` regenerates the
+  starter marketplace.
 - **Docs:** step-by-step setup (Claude Code and opencode), start from a template, connecting agents,
   the act library, command line, troubleshooting.
 

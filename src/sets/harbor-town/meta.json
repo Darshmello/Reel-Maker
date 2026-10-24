@@ -1,0 +1,20 @@
+{
+  "id": "harbor-town",
+  "name": "Harbor Town",
+  "description": "A fishing harbour town of colourful stacked houses climbing a hill behind a quay of small fishing boats, with a striped accent-coloured lighthouse on the breakwater and open sea behind.",
+  "biome": "fishing harbour",
+  "tags": [
+    "harbor",
+    "harbour",
+    "fishing",
+    "boats",
+    "lighthouse",
+    "coastal",
+    "quay",
+    "hill",
+    "sea"
+  ],
+  "author": "Claude",
+  "status": "draft",
+  "prompt": "A fishing harbour town: colourful stacked houses climbing a hill, quays with small fishing boats, a striped lighthouse in the accent colour on the breakwater, open sea behind."
+}

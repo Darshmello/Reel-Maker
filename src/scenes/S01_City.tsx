@@ -27,8 +27,8 @@ export const S01_City: React.FC<{beats: Beats; fr: number}> = ({beats, fr}) => {
       const {spec} = beats;
       const accent = ACCENTS[spec.accent];
       const scene = new THREE.Scene();
-      scene.background = skyTexture(0.09, spec.weather);
       const {pack} = SETS[spec.set ?? DEFAULT_SET] ?? SETS[DEFAULT_SET];
+      scene.background = skyTexture(0.09, spec.weather, pack.sky);
       const H = pack.hero;
       const city = pack.build({
         seed: spec.seed,
@@ -37,7 +37,7 @@ export const S01_City: React.FC<{beats: Beats; fr: number}> = ({beats, fr}) => {
         clear: spec.hero ? [{x: H.x, z: H.z + 0.2, r: 0.8}] : [],
       });
       scene.add(city.group);
-      addLights(scene, FOCUS, 7, LIGHT, spec.weather);
+      addLights(scene, FOCUS, 7, LIGHT, spec.weather, pack.sky?.horizon);
       const hero = spec.hero === 'darsh' ? makeDarsh() : null;
       if (hero) {
         hero.group.position.set(H.x, city.landY, H.z);

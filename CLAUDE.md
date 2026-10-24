@@ -24,6 +24,8 @@ Plan: `C:\Users\darsh\.opencode\plan\reels-3d-pipeline-plan.md`.
 
 ## Palette and look
 - All colours come from `src/style/lowpoly/palette.ts`. No hex literals in scene/kit files.
+- Set packs (`src/sets/<id>/`) keep their own colours in their own `palette.ts`; hex nowhere else in a pack.
+  Packs import only `../kit`, `../types` and their own files. `node scripts/check-set.mjs <id>` enforces this.
 - MeshLambertMaterial with `flatShading: true` everywhere; `toNonIndexed()` if a primitive still smooths.
 - Pastel and quiet; exactly one saturated accent (the bridge, `PALETTE.bridge` / per-video accent).
 - Light: sun #FFF6E8 x2.2 at (30,50,20), shadow map 2048 tight on the hero block; hemisphere

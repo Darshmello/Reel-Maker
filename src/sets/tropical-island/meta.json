@@ -1,0 +1,20 @@
+{
+  "id": "tropical-island",
+  "name": "Tropical Island",
+  "description": "A tropical resort beach with white sand, turquoise shallows, beach huts, a low hotel strip, palm groves and a wooden pier in the accent colour, with a green volcano in the haze.",
+  "biome": "tropical island",
+  "tags": [
+    "tropical",
+    "island",
+    "beach",
+    "resort",
+    "palm",
+    "pier",
+    "volcano",
+    "sea",
+    "hot"
+  ],
+  "author": "Reel Studio",
+  "status": "draft",
+  "prompt": "A tropical island resort: white sand beach and turquoise shallows in front, beach huts and a small low hotel strip, palm groves, a wooden pier in the accent colour, a green volcano peak in the haze behind."
+}

@@ -6,7 +6,7 @@ export const FPS = 30;
 
 export type Word = {w: string; s: number; e: number};
 export type ActKind = 'towers' | 'blackout' | 'rockets' | 'water' | 'crowd' | 'snow' | 'rain';
-export type CamKey = {x: number; z: number};
+export type CamKey = {x: number; z: number; h?: number; tilt?: number; yaw?: number}; // h/tilt/yaw: see kit/Camera SHOTS
 export type CounterSpec = {label: string; from: number; to: number; decimals?: number; prefix?: string; suffix?: string};
 export type ActSpec = {
   kind: ActKind;

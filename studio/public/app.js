@@ -35,6 +35,9 @@ const KIND_MORE = {
   snow: 'Snow falls and covers the city white.',
   rain: 'Rain pours and the streets flood a little.',
 };
+// camera shots (same table as src/kit/Camera.tsx SHOTS)
+const SHOTS = {standard: {}, wide: {h: 4.2, tilt: -11}, aerial: {h: 7.5, tilt: -25}, low: {h: 2.1, tilt: -4}, 'orbit-left': {yaw: 0.38}, 'orbit-right': {yaw: -0.38}};
+const SHOT_NAMES = {standard: 'Standard', wide: 'Wide', aerial: 'Aerial', low: 'Low', 'orbit-left': 'Orbit left', 'orbit-right': 'Orbit right'};
 const CAMS = [{x: -0.35, z: 10.5}, {x: 0.6, z: 11}, {x: 0, z: 14}, {x: 0.3, z: 12.5}];
 const VOICES = ['en-US-AndrewNeural', 'en-US-AriaNeural', 'en-US-GuyNeural', 'en-US-JennyNeural', 'en-GB-RyanNeural', 'en-GB-SoniaNeural', 'en-AU-NatashaNeural'];
 
@@ -56,6 +59,7 @@ const fmtCounter = (c, v) => {
 // ---------------------------------------------------------------- films
 async function load() {
   DATA = await api('/api/films');
+  await loadSets();
   renderGrid();
   renderHero();
   renderTemplates();
@@ -216,6 +220,8 @@ function buildForm() {
   $('#hero').checked = spec.hero === 'darsh';
   $('#rewind').checked = !!spec.end.rewind;
   $('#endTitle').value = spec.end.title;
+  $('#scene').value = spec.scene ?? '';
+  renderSetNow();
   $('#voice').innerHTML = [...new Set([...VOICES, spec.voice])].map((v) => `<option ${v === spec.voice ? 'selected' : ''}>${esc(v)}</option>`).join('');
   $('#accents').innerHTML = Object.entries(pal.accents).map(([k, c]) => `<button type="button" class="swatch" title="${k}" aria-label="${k}" aria-pressed="${k === spec.accent}" data-accent="${k}" style="background:${c}"></button>`).join('');
   $('#weather').innerHTML = Object.entries(pal.weather).map(([k, w]) => `<button type="button" class="tile" aria-pressed="${k === spec.weather}" data-weather="${k}" style="background:linear-gradient(${w.skyTop},${w.skyHorizon})"><span>${k}</span></button>`).join('');
@@ -232,23 +238,28 @@ function buildActs() {
     .map((a, i) => {
       const am = AMOUNT[a.kind];
       return `<fieldset class="card" data-act="${i}">
-        <legend><b>${i + 3}</b> Act ${i + 1}${spec.acts.length > 1 ? `<button type="button" class="icon rm" data-rm="${i}" aria-label="Remove act ${i + 1}">Remove</button>` : ''}</legend>
+        <legend><b>${i + 4}</b> Act ${i + 1}${spec.acts.length > 1 ? `<button type="button" class="icon rm" data-rm="${i}" aria-label="Remove act ${i + 1}">Remove</button>` : ''}</legend>
         <div class="kinds">${DATA.kinds.map((k) => `<button type="button" class="kind" data-kind="${k}" aria-pressed="${k === a.kind}">${KIND_INFO[k][0]}<small>${KIND_INFO[k][1]}</small></button>`).join('')}</div>
+        <div class="row">
+          <label class="field grow"><span>Shot</span><select data-a="shot">${Object.entries(SHOT_NAMES).map(([k, n]) => `<option value="${k}" ${k === (a.shot ?? 'standard') ? 'selected' : ''}>${n}</option>`).join('')}</select></label>
+        </div>
         <label class="field"><span>On-screen label</span><input data-a="label" value="${esc(a.label)}" maxlength="48" placeholder="Week 1"></label>
         ${lineField(`act${i}`, a, 'Week one. The first flakes fall and the city slows down.')}
         <div class="row">
           <label class="field grow"><span>Counter label</span><input data-c="label" value="${esc(a.counter.label)}" placeholder="Snow depth"></label>
           <label class="field small"><span>From</span><input data-c="from" type="number" step="any" value="${a.counter.from}"></label>
           <label class="field small"><span>To</span><input data-c="to" type="number" step="any" value="${a.counter.to}"></label>
+        </div>
+        <details class="adv"><summary>Counter format</summary><div class="row">
           <label class="field small"><span>Prefix</span><input data-c="prefix" value="${esc(a.counter.prefix ?? '')}" maxlength="8"></label>
           <label class="field small"><span>Suffix</span><input data-c="suffix" value="${esc(a.counter.suffix ?? '')}" maxlength="8"></label>
           <label class="field small"><span>Decimals</span><input data-c="decimals" type="number" min="0" max="3" value="${a.counter.decimals ?? 0}"></label>
-        </div>
+        </div></details>
         ${am ? `<div class="field"><span>Intensity</span><div class="range"><input type="range" data-a="amount" min="${am[0]}" max="${am[1]}" step="${am[2]}" value="${a.amount ?? am[3][i]}"><output>${a.amount ?? am[3][i]}</output></div></div>` : ''}
       </fieldset>`;
     })
     .join('');
-  $('#endNo').textContent = spec.acts.length + 3;
+  $('#endNo').textContent = spec.acts.length + 4;
   $('#addAct').hidden = spec.acts.length >= 4;
 }
 
@@ -270,6 +281,7 @@ $('#form').addEventListener('input', (e) => {
   else if (t.id === 'hero') spec.hero = t.checked ? 'darsh' : null;
   else if (t.id === 'rewind') spec.end.rewind = t.checked;
   else if (t.id === 'endTitle') spec.end.title = t.value;
+  else if (t.id === 'scene') spec.scene = t.value;
   else if (t.dataset.k) {
     const obj = Object.fromEntries(lineEntries())[t.dataset.k];
     obj[t.dataset.f] = t.value;
@@ -287,6 +299,11 @@ $('#form').addEventListener('input', (e) => {
     const a = spec.acts[+card.dataset.act];
     pvAt = +card.dataset.act + 1;
     if (t.dataset.a === 'label') a.label = t.value;
+    if (t.dataset.a === 'shot') {
+      const i = +card.dataset.act;
+      a.shot = t.value;
+      a.cam = {x: a.cam?.x ?? CAMS[i].x, z: a.cam?.z ?? CAMS[i].z, ...SHOTS[t.value]};
+    }
     if (t.dataset.a === 'amount') { a.amount = +t.value; t.nextElementSibling.textContent = t.value; }
     if (t.dataset.c) {
       const k = t.dataset.c;
@@ -341,6 +358,11 @@ function setAccent(name) {
 
 // ---------------------------------------------------------------- preview
 function drawPreview() {
+  const cur = SETS.find((x) => x.id === (spec.set ?? 'city-bridge'));
+  const useCover = cur && cur.id !== 'city-bridge' && cur.cover;
+  $('#pvArt').style.display = useCover ? 'none' : '';
+  $('#pv').style.backgroundImage = useCover ? `url("${cur.cover}")` : '';
+  $('#pv').classList.toggle('shot', !!useCover);
   const pal = DATA.palette;
   const sky = pal.weather[spec.weather] ?? {};
   const acc = pal.accents[spec.accent];
@@ -470,6 +492,15 @@ es.addEventListener('line', (e) => {
   DATA.job.done = d.done;
   showJob(DATA.job);
 });
+es.addEventListener('sets', async (e) => {
+  const j = JSON.parse(e.data);
+  JOBS.set(j.id, j);
+  renderJobs();
+  if (j.items.some((i) => i.state !== 'running' && i.state !== 'queued' && !SEEN.has(`${j.id}:${i.setId}`))) {
+    for (const i of j.items) if (i.state === 'done' || i.state === 'failed') SEEN.add(`${j.id}:${i.setId}`);
+    await loadSets();
+  }
+});
 es.addEventListener('end', async (e) => {
   const j = JSON.parse(e.data);
   showJob(j);
@@ -495,7 +526,7 @@ load()
 function route() {
   const h = location.hash.replace(/^#\/?/, '');
   const [view, sub] = h ? h.split('/') : ['home'];
-  const v = ['create', 'films', 'docs'].includes(view) ? view : 'home';
+  const v = ['create', 'films', 'sets', 'docs'].includes(view) ? view : 'home';
   for (const el of document.querySelectorAll('.view')) el.hidden = el.dataset.view !== v;
   if (v === 'docs') for (const a of document.querySelectorAll('[data-doc]')) a.hidden = a.dataset.doc !== (sub || 'getting-started');
   const here = v === 'docs' ? `#/docs/${sub || 'getting-started'}` : v === 'home' ? '#/' : `#/${v}`;
@@ -576,6 +607,7 @@ async function build(prompt) {
   try {
     const r = await api('/api/generate', {method: 'POST', body: {prompt, agent: agent?.id}});
     useTemplate(r.spec, false, true);
+    if ($('#autoSets').checked && r.spec.scene) startSets(r.spec.scene, +$('#variants').value, r.spec.slug, 'create');
     const secs = Math.round((Date.now() - t0) / 1000);
     $('#buildNote').textContent = r.note
       ? `${agent?.name} didn't answer, so this is an offline draft (${r.note}). Edit it or try again.`
@@ -642,3 +674,201 @@ for (const tabs of document.querySelectorAll('[data-tabs]')) {
     for (const p of tabs.querySelectorAll('[data-panel]')) p.hidden = p.dataset.panel !== b.dataset.tab;
   };
 }
+
+// ---------------------------------------------------------------- sets (the marketplace)
+let SETS = [];
+const JOBS = new Map(); // set generation jobs by id
+const JOB_HOME = new Map(); // job id -> 'create' | 'sets'
+const SEEN = new Set();
+let setFilter = 'all';
+
+async function loadSets() {
+  const r = await api('/api/sets');
+  SETS = r.sets;
+  for (const j of r.jobs) JOBS.set(j.id, j);
+  $('#navSets').textContent = SETS.length;
+  renderSetGrid();
+  renderSetPick();
+  renderJobs();
+  if (spec) {
+    renderSetNow();
+    drawPreview();
+  }
+}
+
+const statusTag = (m) => `<span class="tag ${m.status === 'approved' ? 'ok' : ''}">${m.status}</span>`;
+function renderSetGrid() {
+  const biomes = [...new Set(SETS.map((m) => m.biome))];
+  $('#setFilters').innerHTML = ['all', 'approved', 'draft', ...biomes].map((b) => `<button type="button" aria-pressed="${b === setFilter}" data-f="${esc(b)}">${esc(b)}</button>`).join('');
+  const list = SETS.filter((m) => setFilter === 'all' || m.status === setFilter || m.biome === setFilter);
+  $('#setGrid').innerHTML = list
+    .map((m) => `<article class="set-card" data-id="${m.id}">
+      <button class="set-shot" type="button" data-act="open" aria-label="Preview ${esc(m.name)}">${m.cover ? `<img src="${m.cover}" alt="" loading="lazy">` : '<span>no render yet</span>'}</button>
+      <div class="set-meta">
+        <div class="set-title"><h3>${esc(m.name)}</h3>${statusTag(m)}</div>
+        <p>${esc(m.description)}</p>
+        <div class="tags"><span class="tag">${esc(m.biome)}</span><span class="tag">by ${esc(m.author)}</span>${m.usedBy.length ? `<span class="tag">${m.usedBy.length} film${m.usedBy.length > 1 ? 's' : ''}</span>` : ''}</div>
+        <div class="set-actions">
+          <button class="btn primary sm" type="button" data-act="use">Use in a film</button>
+          <button class="btn ghost sm" type="button" data-act="status">${m.status === 'approved' ? 'Move to drafts' : 'Approve'}</button>
+          ${m.status === 'draft' && !m.usedBy.length ? '<button class="btn ghost sm" type="button" data-act="delete">Delete</button>' : ''}
+        </div>
+      </div>
+    </article>`)
+    .join('') || '<p class="note">No sets match.</p>';
+}
+$('#setFilters').onclick = (e) => {
+  const b = e.target.closest('[data-f]');
+  if (!b) return;
+  setFilter = b.dataset.f;
+  renderSetGrid();
+};
+$('#setGrid').onclick = async (e) => {
+  const b = e.target.closest('[data-act]');
+  if (!b) return;
+  const m = SETS.find((x) => x.id === b.closest('[data-id]').dataset.id);
+  const act = b.dataset.act;
+  try {
+    if (act === 'open') return openSet(m);
+    if (act === 'use') {
+      if (!spec) useTemplate(null, false);
+      spec.set = m.id;
+      if (!spec.scene) spec.scene = m.description;
+      buildForm();
+      return go('#/create');
+    }
+    if (act === 'status') await api('/api/sets/status', {method: 'POST', body: {id: m.id, status: m.status === 'approved' ? 'draft' : 'approved'}});
+    if (act === 'delete') {
+      if (b.dataset.armed !== '1') {
+        b.dataset.armed = '1';
+        b.textContent = 'Click to delete';
+        setTimeout(() => { b.dataset.armed = ''; b.textContent = 'Delete'; }, 3000);
+        return;
+      }
+      await api('/api/sets/delete', {method: 'POST', body: {id: m.id}});
+      toast(`Deleted ${m.name}`);
+    }
+    await loadSets();
+  } catch (err) {
+    toast(err.message);
+  }
+};
+
+// set preview: cover and probe side by side, details and the source
+const setModal = document.createElement('div');
+setModal.className = 'modal';
+setModal.hidden = true;
+setModal.innerHTML = '<div class="modal-body set-modal"><button class="icon close" aria-label="Close">×</button><div class="set-modal-in"></div></div>';
+document.body.append(setModal);
+setModal.onclick = (e) => (e.target === setModal || e.target.closest('.close')) && (setModal.hidden = true);
+document.addEventListener('keydown', (e) => e.key === 'Escape' && (setModal.hidden = true));
+async function openSet(m) {
+  const src = await api(`/api/sets/source?id=${m.id}`).catch(() => ({files: {}}));
+  $('.set-modal-in', setModal).innerHTML = `
+    <div class="shots">
+      <figure>${m.cover ? `<img src="${m.cover}" alt="Opening frame">` : ''}<figcaption>Opening frame</figcaption></figure>
+      <figure>${m.probe ? `<img src="${m.probe}" alt="Probe frame">` : ''}<figcaption>Probe: blackout, towers, crowd, rockets</figcaption></figure>
+    </div>
+    <div class="set-info">
+      <p class="crumb">src/sets/${esc(m.id)} · ${esc(m.biome)} · by ${esc(m.author)}</p>
+      <h3>${esc(m.name)}</h3>
+      <p>${esc(m.description)}</p>
+      <div class="tags">${statusTag(m)}${m.tags.map((t) => `<span class="tag">${esc(t)}</span>`).join('')}</div>
+      ${m.prompt ? `<p class="note">Built from: “${esc(m.prompt)}”</p>` : ''}
+      <div class="tabs" data-tabs><div class="tab-bar">${Object.keys(src.files).map((n, i) => `<button type="button" data-tab="${esc(n)}" aria-selected="${i === 0}">${esc(n)}</button>`).join('')}</div>
+      ${Object.entries(src.files).map(([n, t], i) => `<pre class="cmd code" data-panel="${esc(n)}" ${i ? 'hidden' : ''}><code>${esc(t)}</code></pre>`).join('')}</div>
+    </div>`;
+  const tabs = $('[data-tabs]', setModal);
+  $('.tab-bar', tabs).onclick = (e) => {
+    const b = e.target.closest('[data-tab]');
+    if (!b) return;
+    for (const x of tabs.querySelectorAll('[data-tab]')) x.setAttribute('aria-selected', String(x === b));
+    for (const p of tabs.querySelectorAll('[data-panel]')) p.hidden = p.dataset.panel !== b.dataset.tab;
+  };
+  setModal.hidden = false;
+}
+
+// create: the current set and the picker
+function renderSetNow() {
+  const m = SETS.find((x) => x.id === (spec.set ?? 'city-bridge')) ?? SETS[0];
+  if (!m) return;
+  $('#setNow').innerHTML = `<div class="set-chip">${m.cover ? `<img src="${m.cover}" alt="">` : '<i></i>'}<div><b>${esc(m.name)}</b><span>${esc(m.biome)} · ${m.status}</span></div></div>`;
+  for (const b of document.querySelectorAll('#setPick [data-set]')) b.setAttribute('aria-pressed', String(b.dataset.set === m.id));
+}
+function renderSetPick() {
+  $('#setPick').innerHTML = SETS.map((m) => `<button type="button" class="pick" data-set="${m.id}" aria-pressed="${spec && (spec.set ?? 'city-bridge') === m.id}">${m.cover ? `<img src="${m.cover}" alt="">` : '<i></i>'}<span>${esc(m.name)}</span></button>`).join('');
+}
+$('#setPick').onclick = (e) => {
+  const b = e.target.closest('[data-set]');
+  if (!b) return;
+  spec.set = b.dataset.set;
+  renderSetNow();
+  refresh();
+};
+
+// generation jobs, shown on Create (for this film) and on Sets
+async function startSets(request, variants, base, home) {
+  try {
+    const j = await api('/api/sets/generate', {method: 'POST', body: {request, variants, base, agent: $('#agentPick').value}});
+    JOBS.set(j.id, j);
+    JOB_HOME.set(j.id, home);
+    renderJobs();
+  } catch (e) {
+    toast(e.message);
+  }
+}
+$('#buildSets').onclick = () => {
+  const scene = $('#scene').value.trim();
+  if (!scene) return $('#scene').focus();
+  startSets(`${scene}${spec.title ? ` (for the film: ${spec.title})` : ''}`, +$('#variants').value, spec.slug, 'create');
+};
+$('#setBuild').onclick = () => {
+  const p = $('#setPrompt').value.trim();
+  if (!p) return $('#setPrompt').focus();
+  startSets(p, +$('#setVariants').value, undefined, 'sets');
+  $('#setPrompt').value = '';
+};
+$('#setPrompt').onkeydown = (e) => e.key === 'Enter' && $('#setBuild').click();
+
+const STAGE = {queued: 'Queued', writing: 'Writing code', checking: 'Checking + rendering', repairing: 'Fixing errors', reviewing: 'Reviewing its renders'};
+function renderJobs() {
+  const card = (j, i) => {
+    const m = SETS.find((x) => x.id === i.setId);
+    const secs = Math.round(((i.endedAt ?? Date.now()) - j.startedAt) / 1000);
+    const body = i.state === 'done'
+      ? `${m?.cover ? `<img src="${m.cover}" alt="">` : ''}<div><b>${esc(m?.name ?? i.setId)}</b><span>ready in ${Math.floor(secs / 60)}m ${secs % 60}s</span><button class="btn primary sm" type="button" data-use="${i.setId}">Use this set</button></div>`
+      : i.state === 'failed'
+        ? `<i class="x"></i><div><b>${esc(i.setId)}</b><span class="bad">failed: ${esc((i.errors ?? [])[0] ?? '')}</span></div>`
+        : `<i class="spin"></i><div><b>${esc(i.setId)}</b><span>${STAGE[i.stage] ?? esc(i.stage)} · ${Math.floor(secs / 60)}m ${secs % 60}s</span><span class="log">${esc(i.log.at(-1) ?? '')}</span></div>`;
+    return `<div class="job ${i.state}">${body}</div>`;
+  };
+  const list = (home) => [...JOBS.values()].filter((j) => (JOB_HOME.get(j.id) ?? 'sets') === home && j.items.some((i) => i.state !== 'done' || Date.now() - (i.endedAt ?? 0) < 30 * 60e3)).flatMap((j) => j.items.map((i) => card(j, i))).join('');
+  $('#setJobsCreate').innerHTML = list('create');
+  $('#setJobs').innerHTML = list('sets');
+}
+setInterval(() => [...JOBS.values()].some((j) => j.items.some((i) => i.state === 'running')) && renderJobs(), 1000);
+for (const el of ['#setJobsCreate', '#setJobs']) {
+  $(el).onclick = (e) => {
+    const b = e.target.closest('[data-use]');
+    if (!b) return;
+    if (!spec) useTemplate(null, false);
+    spec.set = b.dataset.use;
+    buildForm();
+    go('#/create');
+    toast('Set selected for this film');
+  };
+}
+
+$('#importForm').onsubmit = async (e) => {
+  e.preventDefault();
+  const fd = new FormData(e.target);
+  try {
+    const j = await api('/api/sets/import', {method: 'POST', body: Object.fromEntries(fd)});
+    JOBS.set(j.id, j);
+    JOB_HOME.set(j.id, 'sets');
+    renderJobs();
+    toast('Checking your pack…');
+  } catch (err) {
+    toast(err.message);
+  }
+};

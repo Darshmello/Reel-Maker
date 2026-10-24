@@ -6,6 +6,7 @@ import {execFileSync, spawn} from 'node:child_process';
 import {existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
+import {listSets} from '../scripts/sets-registry.mjs';
 
 export const KIND_RANGE = {towers: [5, 40], rockets: [1, 20], water: [0.1, 1.2], crowd: [100, 6000], snow: [0.1, 1], rain: [0.05, 1]};
 const KIND_DEFAULT = {towers: [30, 30, 40], rockets: [6, 10, 14], water: [0.42, 0.8, 1.1], crowd: [700, 2200, 5000], snow: [0.45, 1, 1], rain: [0.15, 0.55, 0.85]};
@@ -34,15 +35,48 @@ const SCHEMA = {
     },
     end: {type: 'object', properties: {line: {type: 'string'}, anchor: {type: 'string'}, title: {type: 'string'}, rewind: {type: 'boolean'}}, required: ['line', 'anchor', 'title', 'rewind']},
   },
-  required: ['title', 'accent', 'weather', 'hero', 'voice', 'intro', 'acts', 'end'],
+  required: ['title', 'accent', 'weather', 'hero', 'voice', 'scene', 'set', 'intro', 'acts', 'end'],
 };
+SCHEMA.properties.scene = {type: 'string'};
+// camera shots per act; same table as src/kit/Camera.tsx SHOTS (keep in sync)
+export const SHOTS = {standard: {}, wide: {h: 4.2, tilt: -11}, aerial: {h: 7.5, tilt: -25}, low: {h: 2.1, tilt: -4}, 'orbit-left': {yaw: 0.38}, 'orbit-right': {yaw: -0.38}};
+SCHEMA.properties.acts.items.properties.shot = {enum: Object.keys(SHOTS)};
+SCHEMA.properties.acts.items.required.push('shot');
+SCHEMA.properties.set = {type: 'string'};
 
-const SYSTEM = `You write specs for 36-second vertical "what if" Reels. Every film shows the same low-poly
-pastel 3D model city from one slowly moving camera: a river with a bridge (painted in the accent colour),
-a park lawn in front, streets with tiny cars, a skyline on the far shore. A calm narrator reads the script.
+// the installed set packs the writer may choose from (approved first; drafts are fine too)
+const setMenu = () =>
+  listSets()
+    .sort((a, b) => (a.status === b.status ? 0 : a.status === 'approved' ? -1 : 1))
+    .map((m) => `- ${m.id}: ${m.description} [${m.biome}${m.status === 'draft' ? ', draft' : ''}]`)
+    .join('\n');
+const SET_RULES = () => `
+Where the film happens (the set). Each film plays on one set pack: a low-poly diorama stage.
+- scene: one or two sentences describing the place THIS idea needs, concrete and visual, for an artist who
+  will build a new set for it (terrain, a landmark in the accent colour, buildings, vegetation, what fills the
+  foreground). Make it specific to the idea and recognisable: "Antarctica melts" -> an Antarctic research
+  station on ice shelves with penguins and a red-roofed base, not a generic city; "cats run the government"
+  -> a capital with a domed parliament and cat-tree towers. Never describe the default bridge city unless the
+  idea is explicitly about it. Write it even when an installed set fits.
+- set: the id of the installed set that fits best right now (the studio can also build a new one from scene):
+${setMenu()}
+Pick the set whose place matches the idea; use city-bridge only when the idea is about a generic city.
+
+Camera. Each act's single move ends on a shot (same long lens, so it always reads as a model):
+- standard: the default three-quarter view over the set
+- wide: a little higher and further back; shows more of the place
+- aerial: high and steep, looking down; best for scale (crowds filling everything, floods, snow cover)
+- low: near ground level looking across; things loom (towers rising, rockets, a wall of water)
+- orbit-left / orbit-right: the camera swings around the set; a fresh angle for variety
+Give each act the shot that sells its change, vary them across the acts, and save aerial or wide for the
+biggest act. hero is false unless the idea is about Darsh: never put him in a film just because a set has room.`;
+
+const SYSTEM = `You write specs for 36-second vertical "what if" Reels. Every film shows one low-poly pastel 3D
+diorama (the set: a city, a desert town, an island...) from one slowly moving camera, with one landmark painted
+in the accent colour. A calm narrator reads the script.
 The film opens on the question, runs three acts that escalate in time and scale, and ends on a dry punchline.
 
-Each act shows exactly ONE visual change from this library (the city is the only stage, pick what makes the idea visible):
+Each act shows exactly ONE visual change from this library (the set is the only stage, pick what makes the idea visible):
 - towers: new skyscrapers shoot up across the skyline (growth, progress, money, productivity). amount = towers, 5-40
 - blackout: a server farm with an "18+" sign appears and its lights go out one by one (a website/app/internet thing dying). no amount
 - rockets: launch pads in the bay, rockets lift off on smoke (space, ambition, far future). amount = rockets, 1-20
@@ -111,6 +145,7 @@ export const installed = (a) => {
 };
 
 const brief = (request) => `${SYSTEM}
+${SET_RULES()}
 
 The output must match this JSON Schema:
 ${JSON.stringify(SCHEMA)}
@@ -120,7 +155,7 @@ Do not use tools, run commands or edit files. Reply with only the JSON object: n
 ${request}`;
 
 // first balanced {...} in the text that parses as JSON
-const extractJson = (text) => {
+export const extractJson = (text, test = (o) => o.acts) => {
   const t = text.replace(/\x1b\[[0-9;]*m/g, '');
   for (let i = t.indexOf('{'); i !== -1; i = t.indexOf('{', i + 1)) {
     let depth = 0, inStr = false, esc = false;
@@ -130,23 +165,25 @@ const extractJson = (text) => {
       if (c === '"') inStr = true;
       else if (c === '{') depth++;
       else if (c === '}' && --depth === 0) {
-        try { const o = JSON.parse(t.slice(i, j + 1)); if (o && o.acts) return o; } catch {}
+        try { const o = JSON.parse(t.slice(i, j + 1)); if (o && test(o)) return o; } catch {}
         break;
       }
     }
   }
-  throw new Error('no spec JSON in the agent output');
+  throw new Error('no matching JSON in the agent output');
 };
 
-const runAgent = (agent, request, ms = 240000) =>
+// Run a CLI agent on a brief; resolves with the first JSON object in its reply that passes `test`.
+// `cwd` lets a reviewing agent read files (its renders); `command` overrides the agent's command.
+export const runAgent = (agent, text, {ms = 240000, test, cwd, command} = {}) =>
   new Promise((ok, bad) => {
     const dir = mkdtempSync(join(tmpdir(), 'reel-writer-'));
     const file = join(dir, 'brief.md');
-    const text = brief(request);
     writeFileSync(file, text);
-    const usesFile = agent.command.includes('{promptFile}');
-    const cmd = agent.command.replaceAll('{promptFile}', `"${file}"`);
-    const p = spawn(cmd, {cwd: dir, shell: true, windowsHide: true});
+    const base = command ?? agent.command;
+    const usesFile = base.includes('{promptFile}');
+    const cmd = base.replaceAll('{promptFile}', `"${file}"`);
+    const p = spawn(cmd, {cwd: cwd ?? dir, shell: true, windowsHide: true});
     let out = '', err = '';
     const done = () => { clearTimeout(t); rmSync(dir, {recursive: true, force: true}); };
     const t = setTimeout(() => { p.kill(); bad(new Error(`${agent.name} timed out after ${ms / 1000}s. Last output: ${(out + err).replace(/\x1b\[[0-9;]*m/g, '').trim().slice(-200)}`)); }, ms);
@@ -162,7 +199,7 @@ const runAgent = (agent, request, ms = 240000) =>
           if (j.is_error) throw new Error(j.result || 'error');
           body = j.result;
         }
-        ok(extractJson(body));
+        ok(extractJson(body, test));
       } catch (e) {
         bad(new Error(`${agent.name} (exit ${code}): ${e.message}. ${(err || out).replace(/\x1b\[[0-9;]*m/g, '').trim().slice(-240)}`));
       }
@@ -184,13 +221,16 @@ const finish = (g, slugs) => {
     if (a.counter.decimals) c.decimals = a.counter.decimals;
     if (a.counter.prefix) c.prefix = a.counter.prefix;
     if (a.counter.suffix) c.suffix = a.counter.suffix;
-    const act = {kind: a.kind, anchor: a.anchor.replace(/[^\p{L}\p{N}'\s-]/gu, '').trim(), label: a.label, line: a.line, counter: c, cam: {...CAMS[i]}};
+    const shot = SHOTS[a.shot] ? a.shot : 'standard';
+    const act = {kind: a.kind, anchor: a.anchor.replace(/[^\p{L}\p{N}'\s-]/gu, '').trim(), label: a.label, line: a.line, counter: c, shot, cam: {...CAMS[i], ...SHOTS[shot]}};
     if (KIND_RANGE[a.kind]) act.amount = clamp(a.amount ?? KIND_DEFAULT[a.kind][Math.min(i, 2)], KIND_RANGE[a.kind]);
     return act;
   });
   return {
     slug, seed: slug, title: g.title, accent: g.accent, weather: g.weather, hero: g.hero ? 'darsh' : null,
     voice: VOICES.includes(g.voice) ? g.voice : VOICES[0], duration: 36,
+    set: listSets().some((m) => m.id === g.set) ? g.set : 'city-bridge',
+    ...(g.scene ? {scene: String(g.scene).slice(0, 400)} : {}),
     intro: {line: g.intro.line, anchor: g.intro.anchor.replace(/[^\p{L}\p{N}'\s-]/gu, '').trim(), cam0: {x: 0, z: 12}, cam: {x: -0.1, z: 11.5}},
     acts,
     end: {line: g.end.line, anchor: g.end.anchor.replace(/[^\p{L}\p{N}'\s-]/gu, '').trim(), title: g.end.title, rewind: !!g.end.rewind},
@@ -241,10 +281,10 @@ export async function generate(prompt, {validate, slugs, agentId}) {
   let note = null;
   if (agent && !agent.builtin) {
     try {
-      let spec = finish(await runAgent(agent, ask), slugs);
+      let spec = finish(await runAgent(agent, brief(ask)), slugs);
       let v = validate(spec);
       if (!v.ok) {
-        spec = finish(await runAgent(agent, `${ask}\n\nA previous attempt failed these checks; fix them:\n- ${v.errors.join('\n- ')}\n\nPrevious attempt:\n${JSON.stringify(spec)}`), slugs);
+        spec = finish(await runAgent(agent, brief(`${ask}\n\nA previous attempt failed these checks; fix them:\n- ${v.errors.join('\n- ')}\n\nPrevious attempt:\n${JSON.stringify(spec)}`)), slugs);
         v = validate(spec);
       }
       return {spec, check: v, source: agent.name};

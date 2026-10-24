@@ -4,10 +4,12 @@
 // usage: npm run studio   -> http://127.0.0.1:4321
 import {createServer} from 'node:http';
 import {spawn} from 'node:child_process';
-import {createReadStream, existsSync, readFileSync, statSync, writeFileSync} from 'node:fs';
+import {createReadStream, existsSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync} from 'node:fs';
 import {extname, join, resolve} from 'node:path';
 import {makeCue} from '../src/film/beats.ts';
 import {agentConfig, generate, installed, saveAgentConfig} from './generate.mjs';
+import {slugifySet} from './setgen.mjs';
+import {listSets, writeRegistry} from '../scripts/sets-registry.mjs';
 
 const ROOT = resolve(import.meta.dirname, '..');
 const PUB = join(ROOT, 'studio', 'public');
@@ -76,6 +78,7 @@ const validate = (s) => {
   const pal = palette();
   if (!(s?.accent in pal.accents)) errors.push(`accent must be one of ${Object.keys(pal.accents).join(', ')}`);
   if (!(s?.weather in pal.weather)) errors.push(`weather must be one of ${Object.keys(pal.weather).join(', ')}`);
+  if (s?.set !== undefined && !listSets().some((m) => m.id === s.set)) errors.push(`set "${s.set}" is not installed`);
   if (!(s?.duration >= 15 && s?.duration <= 90)) errors.push('duration: 15-90 s');
   if (!Array.isArray(s?.acts) || s.acts.length < 1 || s.acts.length > 4) errors.push('1-4 acts');
   if (errors.length) return {ok: false, errors, cues: []};
@@ -153,6 +156,70 @@ const startRender = (slug, keepVo) => {
     writeFileSync(log, job.lines.join('\n') + '\n');
     send('end', jobView());
   });
+};
+
+// ---- set packs: list with thumbnails, and generation/check jobs run as child processes (a check
+// bundles and renders; keeping it out of this process keeps the studio responsive)
+const setsView = () => {
+  const ideas = readIdeas();
+  return listSets().map((m) => {
+    const out = join(ROOT, 'out', 'sets', m.id);
+    const img = (n) => (existsSync(join(out, `${n}.png`)) ? `/media/sets/${m.id}/${n}.png?v=${Math.round(statSync(join(out, `${n}.png`)).mtimeMs)}` : null);
+    return {...m, cover: img('cover'), probe: img('probe'), usedBy: ideas.filter((s) => (s.set ?? 'city-bridge') === m.id).map((s) => s.slug)};
+  });
+};
+const setJobs = new Map();
+let jobSeq = 0;
+const setJobView = (j) => ({id: j.id, kind: j.kind, request: j.request, startedAt: j.startedAt, items: j.items.map(({proc, ...i}) => i)});
+const runChild = (job, item, args) => {
+  item.state = 'running';
+  const p = spawn(process.execPath, ['--no-warnings', ...args], {cwd: ROOT, windowsHide: true});
+  item.proc = p;
+  let out = '', err = '';
+  p.stdout.on('data', (d) => (out += d));
+  p.stderr.on('data', (d) => {
+    err += d;
+    const lines = err.split(/\r?\n/);
+    err = lines.pop();
+    for (const l of lines) {
+      const m = l.match(/^\[(\w+)\] (.*)$/);
+      if (m) {
+        item.stage = m[1];
+        item.log.push(m[2]);
+        send('sets', setJobView(job));
+      }
+    }
+  });
+  p.on('close', () => {
+    let r = {};
+    try {
+      r = JSON.parse(out.trim().split('\n').pop());
+    } catch {}
+    item.state = r.ok ? 'done' : 'failed';
+    item.setId = r.id ?? item.setId;
+    item.errors = r.errors ?? [err.slice(-300)];
+    item.endedAt = Date.now();
+    send('sets', setJobView(job));
+  });
+};
+const VARIATIONS = ['', 'Variation: a different layout from the obvious one (landmark on the other side, a different street or shoreline pattern).', 'Variation: a denser, busier foreground and a different time-of-day palette.'];
+const startSetJob = (request, variants, agentId, base) => {
+  const job = {id: `job${++jobSeq}`, kind: 'generate', request, startedAt: Date.now(), items: []};
+  const root = base ?? slugifySet(request);
+  for (let k = 0; k < variants; k++) {
+    const setId = variants > 1 ? `${root}-${'abc'[k]}` : root;
+    const item = {setId, state: 'queued', stage: 'queued', log: [], errors: []};
+    job.items.push(item);
+    runChild(job, item, ['studio/setgen.mjs', `${request}${VARIATIONS[k] ? `\n${VARIATIONS[k]}` : ''}`, setId, agentId ?? '']);
+  }
+  setJobs.set(job.id, job);
+  return job;
+};
+const startCheckJob = (setId) => {
+  const job = {id: `job${++jobSeq}`, kind: 'check', request: `import ${setId}`, startedAt: Date.now(), items: [{setId, state: 'queued', stage: 'checking', log: ['lint, typecheck, probe render'], errors: []}]};
+  setJobs.set(job.id, job);
+  runChild(job, job.items[0], ['scripts/check-set.mjs', setId]);
+  return job;
 };
 
 // ---- http
@@ -234,6 +301,57 @@ createServer(async (req, res) => {
       writeIdeas(ideas);
       return json(res, 200, {ok: true, created: i < 0});
     }
+    // ---- set packs (the marketplace)
+    if (path === '/api/sets' && req.method === 'GET') return json(res, 200, {sets: setsView(), jobs: [...setJobs.values()].map(setJobView)});
+    if (path === '/api/sets/status' && req.method === 'POST') {
+      const {id, status} = await body(req);
+      const p = join(ROOT, 'src', 'sets', String(id), 'meta.json');
+      if (!existsSync(p) || !['approved', 'draft'].includes(status)) return json(res, 400, {error: 'unknown set or status'});
+      writeFileSync(p, JSON.stringify({...JSON.parse(readFileSync(p, 'utf8')), status}, null, 2) + '\n');
+      writeRegistry();
+      return json(res, 200, {ok: true});
+    }
+    if (path === '/api/sets/delete' && req.method === 'POST') {
+      const {id} = await body(req);
+      const p = join(ROOT, 'src', 'sets', String(id));
+      if (!/^[a-z0-9-]+$/.test(String(id)) || !existsSync(join(p, 'meta.json'))) return json(res, 404, {error: 'unknown set'});
+      if (JSON.parse(readFileSync(join(p, 'meta.json'), 'utf8')).status !== 'draft') return json(res, 400, {error: 'only drafts can be deleted; set it back to draft first'});
+      const users = readIdeas().filter((s) => s.set === id).map((s) => s.slug);
+      if (users.length) return json(res, 400, {error: `used by ${users.join(', ')}`});
+      rmSync(p, {recursive: true, force: true});
+      rmSync(join(ROOT, 'out', 'sets', String(id)), {recursive: true, force: true});
+      writeRegistry();
+      return json(res, 200, {ok: true});
+    }
+    if (path === '/api/sets/source' && req.method === 'GET') {
+      const id = url.searchParams.get('id') ?? '';
+      const p = join(ROOT, 'src', 'sets', id);
+      if (!/^[a-z0-9-]+$/.test(id) || !existsSync(p)) return json(res, 404, {error: 'unknown set'});
+      const files = Object.fromEntries(readdirSync(p).filter((f) => /\.(ts|json)$/.test(f)).map((f) => [f, readFileSync(join(p, f), 'utf8')]));
+      return json(res, 200, {id, files});
+    }
+    if (path === '/api/sets/generate' && req.method === 'POST') {
+      const {request, variants = 1, agent, base} = await body(req);
+      if (!String(request ?? '').trim()) return json(res, 400, {error: 'describe the place first'});
+      return json(res, 200, setJobView(startSetJob(String(request).slice(0, 600), Math.min(3, Math.max(1, +variants || 1)), agent, base)));
+    }
+    if (path === '/api/sets/import' && req.method === 'POST') {
+      const {id, palette, index, meta} = await body(req);
+      if (!/^[a-z0-9]+(-[a-z0-9]+)*$/.test(String(id)) || existsSync(join(ROOT, 'src', 'sets', String(id)))) return json(res, 400, {error: 'pick a new id: lowercase words joined by dashes'});
+      if (typeof index !== 'string' || typeof palette !== 'string') return json(res, 400, {error: 'index.ts and palette.ts are required'});
+      let m;
+      try {
+        m = typeof meta === 'string' ? JSON.parse(meta) : meta;
+      } catch {
+        return json(res, 400, {error: 'meta.json is not valid JSON'});
+      }
+      const dir = join(ROOT, 'src', 'sets', String(id));
+      mkdirSync(dir, {recursive: true});
+      writeFileSync(join(dir, 'index.ts'), index);
+      writeFileSync(join(dir, 'palette.ts'), palette);
+      writeFileSync(join(dir, 'meta.json'), JSON.stringify({...m, id, status: 'draft'}, null, 2) + '\n');
+      return json(res, 200, setJobView(startCheckJob(String(id))));
+    }
     if (path === '/api/render' && req.method === 'POST') {
       const {slug, keepVo} = await body(req);
       if (job?.state === 'running') return json(res, 409, {error: `already rendering ${job.slug}`});
@@ -250,6 +368,8 @@ createServer(async (req, res) => {
     }
     let m = path.match(/^\/media\/([a-z0-9-]+)\.mp4$/);
     if (m) return file(req, res, join(ROOT, 'out', `${m[1]}.mp4`), 'video/mp4');
+    m = path.match(/^\/media\/sets\/([a-z0-9-]+)\/(cover|probe)\.png$/);
+    if (m) return file(req, res, join(ROOT, 'out', 'sets', m[1], `${m[2]}.png`), 'image/png');
     m = path.match(/^\/media\/([a-z0-9-]+)\/poster$/);
     if (m) return file(req, res, join(ROOT, 'out', m[1], 'qa_cover300.png'), 'image/png');
     const p = join(PUB, path === '/' ? 'index.html' : path);

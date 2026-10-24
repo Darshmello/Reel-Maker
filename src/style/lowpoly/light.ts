@@ -8,7 +8,7 @@ export const SUN_OFFSET = new THREE.Vector3(30, 50, 20);
 export const LIGHT = {sun: 2.2, hemi: 2.0};
 
 // Shadow frustum is kept tight around the hero block (centre, half-size in metres).
-export const addLights = (scene: THREE.Scene, hero: THREE.Vector3, half = 7, light = LIGHT, weather: WeatherName = 'clear') => {
+export const addLights = (scene: THREE.Scene, hero: THREE.Vector3, half = 7, light = LIGHT, weather: WeatherName = 'clear', horizon?: string) => {
   const w = WEATHER[weather];
   const sun = new THREE.DirectionalLight(col(w.sun), light.sun * w.sunScale);
   sun.position.copy(hero).add(SUN_OFFSET);
@@ -29,13 +29,13 @@ export const addLights = (scene: THREE.Scene, hero: THREE.Vector3, half = 7, lig
   scene.add(sun, sun.target);
   const hemi = new THREE.HemisphereLight(col(w.hemiSky), col(PALETTE.hemiGround), light.hemi);
   scene.add(hemi);
-  scene.fog = new THREE.Fog(col(w.skyHorizon), 80, 220);
+  scene.fog = new THREE.Fog(col(horizon ?? w.skyHorizon), 80, 220);
   return {sun, hemi};
 };
 
 // Screen-space sky: skyTop at the frame top, skyHorizon from just above the horizon down.
-export const skyTexture = (horizonY = 0.1, weather: WeatherName = 'clear') => {
-  const w = WEATHER[weather];
+export const skyTexture = (horizonY = 0.1, weather: WeatherName = 'clear', sky?: {top: string; horizon: string}) => {
+  const w = sky ? {skyTop: sky.top, skyHorizon: sky.horizon} : WEATHER[weather];
   const c = document.createElement('canvas');
   c.width = 4;
   c.height = 512;

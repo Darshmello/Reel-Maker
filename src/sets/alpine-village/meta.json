@@ -1,0 +1,20 @@
+{
+  "id": "alpine-village",
+  "name": "Alpine Village",
+  "description": "Wooden chalets with steep roofs cluster around a plaza and a small lake in a green valley, with a church whose steeple is in the accent colour, pine forests and jagged snow-capped mountains behind.",
+  "biome": "mountains",
+  "tags": [
+    "alpine",
+    "village",
+    "chalet",
+    "mountains",
+    "snow",
+    "lake",
+    "pine",
+    "church",
+    "valley"
+  ],
+  "author": "Claude",
+  "status": "draft",
+  "prompt": "An alpine village in a green valley: wooden chalets with steep roofs, pine forests, a church whose steeple is in the accent colour, a small lake by the plaza, jagged snow-capped mountains behind."
+}

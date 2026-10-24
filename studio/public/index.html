@@ -23,11 +23,13 @@
       <a href="#/"><span>Home</span></a>
       <a href="#/create"><span>Create</span></a>
       <a href="#/films"><span>Films</span><em id="navFilms"></em></a>
+      <a href="#/sets"><span>Sets</span><em id="navSets"></em></a>
       <p class="side-group">Docs</p>
       <a href="#/docs/getting-started"><span>Getting started</span></a>
       <a href="#/docs/templates"><span>Start from a template</span></a>
       <a href="#/docs/agents"><span>Connect an agent</span></a>
       <a href="#/docs/acts"><span>Act library</span></a>
+      <a href="#/docs/set-packs"><span>Build a set pack</span></a>
       <a href="#/docs/cli"><span>Command line</span></a>
       <a href="#/docs/troubleshooting"><span>Troubleshooting</span></a>
       <div class="side-agent" id="sideAgent"></div>
@@ -60,9 +62,6 @@
             <video id="heroVideo" muted loop playsinline autoplay preload="auto"></video>
             <button class="sound" id="heroSound" aria-label="Turn sound on">Sound off</button>
           </div>
-          <span class="chip c1">30 fps · H.264 CRF 18</span>
-          <span class="chip c2">16/16 QA</span>
-          <span class="chip c3">frame-identical re-renders</span>
         </div>
       </div>
       <div class="page">
@@ -95,6 +94,7 @@
           <div class="prompt-foot">
             <label class="inline">Writer <select id="agentPick"></select></label>
             <span class="agent-status" id="agentStatus"></span>
+            <label class="toggle tiny"><input type="checkbox" id="autoSets" checked><i></i><span>Also build new sets for the scene</span></label>
             <span class="spacer"></span>
             <label class="inline">Or start from <select id="template"></select></label>
           </div>
@@ -124,8 +124,20 @@
                 </div>
               </details>
             </fieldset>
+            <fieldset class="card" id="setCard">
+              <legend><b>2</b> Where it happens</legend>
+              <div class="set-now" id="setNow"></div>
+              <label class="field"><span>Scene: the place this film needs (the writer fills this in)</span><textarea id="scene" rows="2" placeholder="A tropical island with a volcano, beach huts and a pier in the accent colour"></textarea></label>
+              <div class="row">
+                <button class="btn primary sm" type="button" id="buildSets">Build sets for this scene</button>
+                <label class="inline">Variants <select id="variants"><option>1</option><option selected>2</option><option>3</option></select></label>
+                <span class="note">Your agent writes new set code; each takes a few minutes and is checked and rendered before you can pick it.</span>
+              </div>
+              <div class="set-jobs" id="setJobsCreate"></div>
+              <details class="adv" id="setPickWrap"><summary>Pick from installed sets</summary><div class="set-pick" id="setPick"></div></details>
+            </fieldset>
             <fieldset class="card">
-              <legend><b>2</b> Opening line</legend>
+              <legend><b>3</b> Opening line</legend>
               <div class="line-field" data-line="intro"></div>
             </fieldset>
             <div class="acts" id="acts"></div>
@@ -173,6 +185,42 @@
           <p class="sub">Every film is one entry in <code>ideas.json</code>. Hover to preview, click to watch.</p>
         </header>
         <div class="grid" id="grid"></div>
+      </div>
+    </section>
+
+    <!-- SETS -->
+    <section class="view" data-view="sets">
+      <div class="page wide">
+        <header class="page-head">
+          <p class="crumb">Workspace / Sets</p>
+          <h1 class="h1">Sets</h1>
+          <p class="sub">The places films happen. Each set is a small TypeScript pack in <code>src/sets/&lt;id&gt;/</code>. Describe a place and your agent writes a new one, or add your own. New sets start as drafts; approve the ones you like.</p>
+        </header>
+        <div class="prompt-card">
+          <label class="prompt-label" for="setPrompt">Describe a place</label>
+          <div class="prompt-row">
+            <input id="setPrompt" class="prompt-input" placeholder="A Japanese mountain town with a red torii gate and cherry trees" maxlength="400">
+            <button class="btn primary" id="setBuild" type="button">Build set</button>
+          </div>
+          <div class="prompt-foot">
+            <label class="inline">Variants <select id="setVariants"><option selected>1</option><option>2</option><option>3</option></select></label>
+            <span class="spacer"></span>
+            <a href="#/docs/set-packs" class="inline">How set packs work →</a>
+          </div>
+          <div class="set-jobs" id="setJobs"></div>
+        </div>
+        <div class="filters" id="setFilters"></div>
+        <div class="set-grid" id="setGrid"></div>
+        <details class="card import" id="importWrap">
+          <summary><b>Add your own pack</b> <span class="note">paste the three files; it is checked and rendered like a generated one</span></summary>
+          <form id="importForm" class="import-form">
+            <label class="field"><span>id</span><input name="id" placeholder="my-town" required spellcheck="false"></label>
+            <label class="field"><span>meta.json</span><textarea name="meta" rows="4" spellcheck="false" required>{"name": "", "description": "", "biome": "", "tags": [], "author": ""}</textarea></label>
+            <label class="field"><span>palette.ts</span><textarea name="palette" rows="5" spellcheck="false" required></textarea></label>
+            <label class="field"><span>index.ts</span><textarea name="index" rows="10" spellcheck="false" required></textarea></label>
+            <button class="btn primary sm" type="submit">Check and add</button>
+          </form>
+        </details>
       </div>
     </section>
 
@@ -320,6 +368,38 @@ powershell -ExecutionPolicy Bypass -File scripts/batch.ps1 -Only snow-month,rain
             <li>Remotion render → two-pass loudnorm → <code>+faststart</code></li>
             <li><code>qa.py</code>: 16 checks</li>
           </ol>
+        </article>
+
+        <article data-doc="set-packs" hidden>
+          <p class="crumb">Docs / Build a set pack</p>
+          <h1 class="h1">Build a set pack</h1>
+          <p class="sub">A set pack is the stage a film plays on. It is one folder of TypeScript that builds low-poly geometry with the shared kit and tells the act library where things go: which buildings can grow, where people stand, where the server farm and rocket pads fit. Any pack that fills in the contract gets every act for free.</p>
+          <h2 class="h2s">The folder</h2>
+          <pre class="cmd"><code>src/sets/my-town/
+  meta.json     name, description, biome, tags, author, status
+  palette.ts    every colour the pack uses (the only place hex is allowed)
+  index.ts      export const pack: SetPack = {hero, build(opts) => SetBuild}</code></pre>
+          <h2 class="h2s">What build() returns</h2>
+          <ul class="doc-list">
+            <li><code>group</code>, <code>local</code>, <code>toWorld</code>: the scene graph and the pack's frame (use <code>frame()</code> from the kit).</li>
+            <li><code>landY</code>: ground height. <code>water</code>: a sea plane under the ground that water acts raise.</li>
+            <li><code>buildings</code> + <code>records</code>: what towers grow, snow caps and crowds climb (use <code>blocks()</code>).</li>
+            <li><code>walk</code>: open ground for crowds, <code>walk[0]</code> first. <code>snow</code>: ground snow covers.</li>
+            <li><code>lot</code>: where a server farm fits. <code>pads</code>: a band where rockets launch.</li>
+          </ul>
+          <h2 class="h2s">House rules (checked)</h2>
+          <ul class="doc-list">
+            <li>Colours only from <code>palette.ts</code>; imports only from <code>../kit</code> and the pack's own files.</li>
+            <li>Deterministic: <code>rand(seed, key)</code> only. No <code>Math.random</code>, clocks, DOM or network.</li>
+            <li>Diorama scale for the fixed long-lens camera: fill the lower half of the frame with small things, one landmark in the accent colour, a hazy far layer.</li>
+          </ul>
+          <h2 class="h2s">Commands</h2>
+          <pre class="cmd"><code>node scripts/check-set.mjs my-town          # lint, typecheck, render cover + probe
+node studio/setgen.mjs "a harbour town" harbour   # have your agent write one
+node scripts/seed-sets.mjs                   # regenerate the starter marketplace</code></pre>
+          <p>The probe render runs a server-farm blackout, towers, a crowd and rockets on the set, so you see every act working before a film uses it. Thumbnails land in <code>out/sets/&lt;id&gt;/</code>.</p>
+          <h2 class="h2s">Share a pack</h2>
+          <p>Packs are plain files: share one by sending its folder, or open a pull request that adds <code>src/sets/&lt;id&gt;/</code> to the repository. Anyone who pulls it gets it in their Sets page after a check.</p>
         </article>
 
         <article data-doc="troubleshooting" hidden>

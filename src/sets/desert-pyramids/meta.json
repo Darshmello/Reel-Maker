@@ -1,0 +1,9 @@
+{
+  "id": "desert-pyramids",
+  "name": "Desert Pyramids",
+  "description": "A low adobe town on warm sand with a palm oasis, dunes and three pyramids in the haze; capstones in the accent colour.",
+  "biome": "desert",
+  "tags": ["desert", "pyramids", "egypt", "sand", "oasis", "ancient", "hot"],
+  "author": "Reel Studio",
+  "status": "approved"
+}

@@ -1,0 +1,22 @@
+// Alpine Village colours. The only place this pack writes hex.
+export const P = {
+  grass: '#A9CD8B',
+  field: ['#C9DB92', '#E4D791', '#9FC480'],
+  furrow: '#B7CC84',
+  road: '#DDD2BC',
+  plaza: '#E8E0CC',
+  yard: '#DDE4C9',
+  shore: '#E7DEBC',
+  lake: '#9CCBD8',
+  sea: '#8FBBD2',
+  wall: ['#EBD9BD', '#E0C6A0', '#D6B48C', '#F1E6D2', '#C99F78'],
+  roof: ['#B5654F', '#8E5E4A', '#A3523F', '#7B6A5A', '#C0785A'],
+  chWall: '#F3ECDF',
+  slate: '#8A7F85',
+  pine: ['#5E8F63', '#4F7F5A', '#6C9E6B'],
+  foot: '#8FBA88',
+  rock: '#A9B5C7',
+  rockFar: '#BDC8D9',
+  snowcap: '#F6F8FB',
+  boat: ['#E48A7A', '#F2C879', '#7FA7D6'],
+} as const;

@@ -1,0 +1,20 @@
+{
+  "id": "farmland",
+  "name": "Farmland",
+  "description": "Rolling farmland of crop-field patchwork and hedgerows around a small village crossroads, with a big barn in the accent colour, grain silos, and a row of wind turbines on low hills.",
+  "biome": "farmland",
+  "tags": [
+    "farmland",
+    "countryside",
+    "fields",
+    "hedgerows",
+    "barn",
+    "silo",
+    "wind turbines",
+    "village",
+    "rural"
+  ],
+  "author": "Claude",
+  "status": "draft",
+  "prompt": "Rolling farmland countryside: a patchwork of crop fields and hedgerows, a small village crossroads, a big barn in the accent colour, grain silos, a row of wind turbines on low hills."
+}

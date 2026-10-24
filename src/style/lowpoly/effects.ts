@@ -7,6 +7,7 @@ import type {Act, Beats} from '../../film/beats';
 import {PALETTE, col} from './palette';
 import type {SetBuild} from '../../sets/types';
 import {box, chamferBox, flat, mat4} from './props';
+import {makeCamera, placeCamera} from '../../kit/Camera';
 
 export type Effect = {update: (e: number, cam: THREE.Vector3) => void};
 type Ctx = {city: SetBuild; beats: Beats; seed: string; accent: string; scene: THREE.Scene};
@@ -44,14 +45,12 @@ export const level = (e: number, acts: Act[], beats: Beats, base = 0) => {
 const towers = (acts: Act[], {city, seed}: Ctx): Effect => {
   const {records, buildings} = city;
   if (!buildings) return {update: () => {}};
-  const cam = new THREE.PerspectiveCamera(24, 1080 / 1920, 0.1, 400);
+  const cam = makeCamera();
   const grow: {idx: number; at: number; k: number}[] = [];
   const taken = new Set<number>();
   for (const a of acts) {
     // pick buildings that sit inside the frame at this act's end camera
-    cam.position.set(a.cam.x, 3.4, a.cam.z);
-    cam.rotation.set(THREE.MathUtils.degToRad(-10), 0, 0);
-    cam.updateMatrixWorld(true);
+    placeCamera(cam, a.cam);
     const near: {idx: number; score: number}[] = [], far: {idx: number; score: number}[] = [];
     records.forEach((b, idx) => {
       if (taken.has(idx)) return;

@@ -1,0 +1,21 @@
+{
+  "id": "antarctica-station-a",
+  "name": "Antarctica Station",
+  "description": "A research station on a broad white ice shelf with a red-roofed main base, orange cabins, radio masts and a wooden dock, penguins and seals in the foreground, snow-dusted rocky hills and icebergs floating in the dark sea behind.",
+  "biome": "antarctic ice shelf",
+  "tags": [
+    "antarctica",
+    "ice",
+    "research station",
+    "penguins",
+    "seals",
+    "icebergs",
+    "polar",
+    "snow",
+    "dock",
+    "cold"
+  ],
+  "author": "Claude",
+  "status": "draft",
+  "prompt": "An Antarctic research station on broad white ice shelves, with a red-roofed main base as the landmark, small orange cabins, radio masts, a short wooden dock, snow-dusted rocky hills, and groups of low-poly penguins and a few seals in the foreground, with icebergs floating in the dark sea behind. (for the film: What if Antarctica melted completely?)"
+}
