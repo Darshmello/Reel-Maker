@@ -7,7 +7,7 @@
 import * as THREE from 'three';
 import {random} from 'remotion';
 import {PALETTE, col} from './palette';
-import {TREE_VARIANTS, carGeometry, chamferBox, flat, instanced, makeBridge, mat4, treeGeometry} from './props';
+import {BRIDGE, TREE_VARIANTS, carGeometry, chamferBox, flat, instanced, makeBridge, mat4, treeGeometry} from './props';
 
 export const SET = {
   landY: 0.45, // top of the raised blocks above the water line
@@ -17,12 +17,26 @@ export const SET = {
   hero: new THREE.Vector3(0, 0, -6), // world position of the bridge centre
 };
 
-export type CityOpts = {seed: string | number; accent: string};
+// The lot the server farm stands on when a film uses it (local coords, centre and half-size).
+export const SERVER_LOT = {x: -2.6, z: 1.85, hx: 0.85, hz: 0.5};
+
+// World-space circles kept free of trees and buildings (e.g. where the hero figure sits).
+export type Clear = {x: number; z: number; r: number};
+export type CityOpts = {seed: string | number; accent: string; server?: boolean; clear?: Clear[]};
+
+export type Building = {x: number; z: number; w: number; h: number; d: number; far: boolean};
+export type Rect = {x0: number; x1: number; z0: number; z1: number; y?: number};
 
 export type City = {
-  group: THREE.Group;
+  group: THREE.Group; // add to the scene
+  local: THREE.Group; // the yawed set frame; effects add children here in local coords
   water: THREE.Mesh;
   bridge: THREE.Mesh;
+  buildings: THREE.InstancedMesh;
+  records: Building[]; // one per instance, same order
+  park: Rect;
+  walk: Rect[]; // open surfaces people can stand on (local)
+  toWorld: (x: number, z: number) => THREE.Vector3;
 };
 
 type Item = {m: THREE.Matrix4; c: string};
@@ -35,7 +49,7 @@ const slab = (x0: number, x1: number, z0: number, z1: number, y0: number, y1: nu
   return m;
 };
 
-export const buildCity = ({seed, accent}: CityOpts): City => {
+export const buildCity = ({seed, accent, server = false, clear = []}: CityOpts): City => {
   const r = (k: string) => random(`${seed}:${k}`);
   const root = new THREE.Group();
   const group = new THREE.Group();
@@ -68,6 +82,7 @@ export const buildCity = ({seed, accent}: CityOpts): City => {
 
   // buildings behind the bridge street, low near the water and the camera
   const items: Item[] = [];
+  const records: Building[] = [];
   const cell = 1.3;
   // building colours, weighted: the deep brick tone is rare so it never competes with the accent
   const W = [0.24, 0.25, 0.2, 0.25, 0.06];
@@ -78,6 +93,13 @@ export const buildCity = ({seed, accent}: CityOpts): City => {
   };
   // distance from the opening camera position: near buildings stay low so we see their roofs
   group.updateMatrixWorld(true);
+  const toWorld = (x: number, z: number) => new THREE.Vector3(x, 0, z).applyMatrix4(group.matrixWorld);
+  const blocked = (x: number, z: number, pad: number) => {
+    const w = toWorld(x, z);
+    return clear.some((c) => Math.hypot(w.x - c.x, w.z - c.z) < c.r + pad);
+  };
+  const L = SERVER_LOT;
+  const onLot = (x: number, z: number, pad: number) => server && Math.abs(x - L.x) < L.hx + pad && Math.abs(z - L.z) < L.hz + pad;
   const camXZ = new THREE.Vector2(0, 12);
   const camDist = (x: number, z: number) => {
     const w = new THREE.Vector3(x, 0, z).applyMatrix4(group.matrixWorld);
@@ -93,11 +115,12 @@ export const buildCity = ({seed, accent}: CityOpts): City => {
         if (r(`gap${k}`) < 0.14) continue;
         const w = 0.7 + r(`w${k}`) * 0.4, d = 0.7 + r(`d${k}`) * 0.4;
         const x = s * (xq + 0.25 + ci * cell + w / 2);
-        if (inPark(x, z, 0.6)) continue;
+        if (inPark(x, z, 0.6) || onLot(x, z, 0.45) || blocked(x, z, 0.6)) continue;
         // low near the camera (we see roofs) and around the bridge (its silhouette stays on water)
         const near = THREE.MathUtils.clamp((camDist(x, z) - 6) / 16, 0.3, 1) * THREE.MathUtils.clamp(Math.hypot(x, z) / 5, 0.45, 1);
         const h = (0.4 + r(`h${k}`) * 0.85 + (r(`t${k}`) < 0.06 ? 0.7 : 0)) * near;
         items.push({m: mat4(x, landY, z, w, h, d), c: bcol(k)});
+        records.push({x, z, w, h, d, far: false});
       }
     }
   }
@@ -112,14 +135,17 @@ export const buildCity = ({seed, accent}: CityOpts): City => {
       const w = 0.7 + r(`w${k}`) * 0.4, d = 0.7 + r(`d${k}`) * 0.4;
       const h = 0.5 + r(`h${k}`) * 1.1 + (r(`t${k}`) < 0.07 ? 1.0 + r(`tt${k}`) * 1.2 : 0);
       items.push({m: mat4(ci * cell, landY, z, w, h, d), c: bcol(k)});
+      records.push({x: ci * cell, z, w, h, d, far: true});
     }
   }
-  group.add(instanced(chamferBox(1, 1, 1, 0.03), items));
+  const buildings = instanced(chamferBox(1, 1, 1, 0.03), items);
+  group.add(buildings);
 
   // trees: a few on each front lawn, sparse along the quays
   const {canopy, trunk} = treeGeometry();
   const can: Item[] = [], trk: Item[] = [];
   const tree = (x: number, z: number, k: string) => {
+    if (blocked(x, z, 0.25) || onLot(x, z, 0.2)) return;
     const v = TREE_VARIANTS[Math.floor(r(`tv${k}`) * 3)];
     const s = 0.55 + r(`ts${k}`) * 0.15;
     trk.push({m: mat4(x, landY, z, 1, v.trunk * s, 1), c: PALETTE.trunk});
@@ -146,5 +172,15 @@ export const buildCity = ({seed, accent}: CityOpts): City => {
   }
   group.add(instanced(carGeometry(), cars));
 
-  return {group: root, water, bridge: bridge.mesh};
+  const walk: Rect[] = [
+    P,
+    {x0: C + Q, x1: xq, z0: -16, z1: Zf - Q}, // near quay road
+    {x0: -xq, x1: -C - Q, z0: -16, z1: Zf - Q}, // far quay road
+    {x0: xq, x1: 9, z0: -0.2, z1: 0.2}, // street off the bridge (near)
+    {x0: -9, x1: -xq, z0: -0.2, z1: 0.2}, // street off the bridge (far)
+    {x0: -BRIDGE.half, x1: BRIDGE.half, z0: -0.1, z1: 0.1, y: BRIDGE.deckY}, // bridge deck
+    {x0: C, x1: 9, z0: Zf - 0.18, z1: Zf - 0.04}, // front promenades
+    {x0: -9, x1: -C, z0: Zf - 0.18, z1: Zf - 0.04},
+  ];
+  return {group: root, local: group, water, bridge: bridge.mesh, buildings, records, park: P, walk, toWorld};
 };

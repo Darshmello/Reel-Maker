@@ -1,0 +1,98 @@
+[
+  {
+    "slug": "darsh-locked-in",
+    "seed": "city-01",
+    "title": "What if Darsh locked in?",
+    "accent": "red",
+    "weather": "clear",
+    "hero": "darsh",
+    "voice": "en-US-AndrewNeural",
+    "duration": 36,
+    "intro": {"line": "What if Darsh actually locked in?", "anchor": "What if", "cam0": {"x": 0, "z": 12}, "cam": {"x": -0.2, "z": 11.4}},
+    "acts": [
+      {
+        "kind": "towers", "anchor": "Day one", "label": "Day 1: phone in a drawer",
+        "line": "Day one. His phone goes in a drawer. No reels, no dilly-dallying. Nine straight hours of real work, and the city starts building itself.",
+        "counter": {"label": "Hours locked in", "from": 0, "to": 9},
+        "cam": {"x": -0.5, "z": 9.2}, "amount": 30
+      },
+      {
+        "kind": "blackout", "anchor": "Day thirty", "label": "Day 30: a certain website shuts down",
+        "line": "Day thirty. A certain website quietly shuts down its servers. Turns out, Darsh was their main user.",
+        "counter": {"label": "Servers online", "from": 4096, "to": 0},
+        "cam": {"x": 1.2, "z": 9.6}
+      },
+      {
+        "kind": "rockets", "anchor": "Year one", "label": "Year 1: Type II civilization",
+        "line": "Year one. The work compounds. Launch pads fill the bay, a rocket goes up every minute, and humanity becomes a Type Two civilization.",
+        "counter": {"label": "Kardashev scale", "from": 0.73, "to": 2.0, "decimals": 2, "prefix": "Type "},
+        "cam": {"x": 0.3, "z": 14}, "amount": 10
+      }
+    ],
+    "end": {"line": "Anyway. Darsh just opened Instagram.", "anchor": "Anyway", "title": "Anyway. He just opened Instagram."}
+  },
+  {
+    "slug": "sea-level-1km",
+    "seed": "city-02",
+    "title": "What if sea level rose one kilometre?",
+    "accent": "orange",
+    "weather": "overcast",
+    "hero": null,
+    "voice": "en-GB-RyanNeural",
+    "duration": 36,
+    "intro": {"line": "What if sea level rose one kilometre?", "anchor": "What if", "cam0": {"x": 0, "z": 12}, "cam": {"x": 0.1, "z": 11.5}},
+    "acts": [
+      {
+        "kind": "water", "anchor": "At first", "label": "The harbour walls",
+        "line": "At first, nothing dramatic. The water climbs the harbour walls, and the quays go quiet.",
+        "counter": {"label": "Sea level", "from": 0, "to": 120, "prefix": "+", "suffix": " m"},
+        "cam": {"x": 0, "z": 10}, "amount": 0.42
+      },
+      {
+        "kind": "water", "anchor": "Then the parks", "label": "Every street a canal",
+        "line": "Then the parks go under, and every street becomes a canal.",
+        "counter": {"label": "Sea level", "from": 120, "to": 450, "prefix": "+", "suffix": " m"},
+        "cam": {"x": 0.6, "z": 11}, "amount": 0.8
+      },
+      {
+        "kind": "water", "anchor": "At a full", "label": "Only the towers remain",
+        "line": "At a full kilometre, only the bridge towers and the tallest roofs stay above water.",
+        "counter": {"label": "Sea level", "from": 450, "to": 1000, "prefix": "+", "suffix": " m"},
+        "cam": {"x": 0, "z": 14}, "amount": 1.25
+      }
+    ],
+    "end": {"line": "Every coastal city on Earth would look like this.", "anchor": "Every coastal", "title": "Every coastal city. Gone."}
+  },
+  {
+    "slug": "everyone-one-city",
+    "seed": "city-03",
+    "title": "What if everyone on Earth stood in one city?",
+    "accent": "violet",
+    "weather": "golden",
+    "hero": null,
+    "voice": "en-US-AriaNeural",
+    "duration": 36,
+    "intro": {"line": "What if everyone on Earth stood in one city?", "anchor": "What if", "cam0": {"x": 0, "z": 12}, "cam": {"x": -0.1, "z": 11.5}},
+    "acts": [
+      {
+        "kind": "crowd", "anchor": "First the parks", "label": "100,000 people",
+        "line": "First, the parks fill up. A hundred thousand people, and it still feels like a festival.",
+        "counter": {"label": "People", "from": 0, "to": 100000},
+        "cam": {"x": -0.4, "z": 9.5}, "amount": 700
+      },
+      {
+        "kind": "crowd", "anchor": "Then the bridges", "label": "10 million",
+        "line": "Then the bridges and the streets. Ten million. Traffic stops forever.",
+        "counter": {"label": "People", "from": 100000, "to": 10000000},
+        "cam": {"x": 0.8, "z": 10.5}, "amount": 2200
+      },
+      {
+        "kind": "crowd", "anchor": "Then every rooftop", "label": "8 billion",
+        "line": "Then every rooftop and every quay. Eight billion people, shoulder to shoulder, in one city.",
+        "counter": {"label": "People", "from": 10000000, "to": 8000000000},
+        "cam": {"x": 0, "z": 14}, "amount": 5000
+      }
+    ],
+    "end": {"line": "And somehow, the rest of the planet is completely empty.", "anchor": "And somehow", "title": "The rest of Earth: empty."}
+  }
+]
