@@ -38,6 +38,9 @@ export const instanced = (geo: THREE.BufferGeometry, items: {m: THREE.Matrix4; c
     mesh.setColorAt(i, col(it.c));
   });
   mesh.count = items.length;
+  // instances move per frame (towers grow, etc.): a bounding sphere computed once would cull them
+  // depending on render history, so a sequence could differ from a single still
+  mesh.frustumCulled = false;
   mesh.castShadow = shadow;
   mesh.receiveShadow = true;
   return mesh;

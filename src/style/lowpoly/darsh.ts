@@ -112,16 +112,17 @@ export const makeDarsh = () => {
     torso.scale.y = 1 + Math.sin(t * 0.21) * 0.008;
     for (const {s, shoulder, elbow} of arms) {
       const tap = type * Math.max(0, Math.sin(t * 1.9 + (s > 0 ? 0 : 1.7))) * 0.09;
-      shoulder.rotation.x = lerp(-0.42, -0.62, p);
-      shoulder.rotation.z = s * lerp(0.08, 0.3, p);
-      elbow.rotation.x = lerp(-1.18, -1.95, p) + tap;
-      elbow.rotation.z = -s * lerp(0.12, 0.35, p);
+      // phone: hands come in to the middle of the chest; typing: forearms forward onto the keys
+      shoulder.rotation.x = lerp(-0.42, -0.5, p);
+      shoulder.rotation.z = s * lerp(0.08, -0.34, p);
+      elbow.rotation.x = lerp(-1.18, -1.88, p) + tap;
+      elbow.rotation.z = -s * lerp(0.12, 0.05, p);
     }
     // laptop lid: closed lies toward Darsh; open leans a little toward camera
     lid.rotation.x = lerp(-Math.PI / 2 + 0.02, 0.22, l);
     // phone: in both hands at chest height, then slides into the desk drawer
     const scroll = Math.sin(t * 0.6) * 0.004 * p;
-    phone.position.set(0, lerp(top - 0.03, 0.66 + scroll, p), lerp(deskZ - 0.08, 0.19, p));
+    phone.position.set(0, lerp(top - 0.03, 0.5 + scroll, p), lerp(deskZ - 0.08, 0.26, p));
     phone.rotation.x = lerp(-Math.PI / 2, -0.75, p);
     const vis = Math.min(1, p * 6);
     phone.scale.setScalar(Math.max(0.001, vis));

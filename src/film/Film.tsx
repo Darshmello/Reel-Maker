@@ -9,7 +9,8 @@ import {Counter, formatNumber} from '../kit/Counter';
 import {Finish} from '../kit/Finish';
 import {PALETTE} from '../style/lowpoly/palette';
 
-export type FilmProps = {spec: Spec; words: Word[]; audio: string | null};
+// text=false renders the film without titles/counter (QA diffs the two to locate every text pixel)
+export type FilmProps = {spec: Spec; words: Word[]; audio: string | null; text?: boolean};
 
 const clamp = {extrapolateLeft: 'clamp', extrapolateRight: 'clamp'} as const;
 const ease = Easing.bezier(0.45, 0, 0.55, 1);
@@ -17,7 +18,7 @@ const ease = Easing.bezier(0.45, 0, 0.55, 1);
 const win = (fr: number, a: number, b: number, fadeIn = 6, fadeOut = 8) =>
   Math.min(fadeIn ? interpolate(fr, [a, a + fadeIn], [0, 1], clamp) : fr >= a ? 1 : 0, interpolate(fr, [b - fadeOut, b], [1, 0], clamp));
 
-export const Film: React.FC<FilmProps> = ({spec, words, audio}) => {
+export const Film: React.FC<FilmProps> = ({spec, words, audio, text = true}) => {
   const fr = useCurrentFrame();
   const beats = useMemo(() => makeBeats(spec, words), [spec, words]);
   const {acts, endStart, total} = beats;
@@ -42,10 +43,8 @@ export const Film: React.FC<FilmProps> = ({spec, words, audio}) => {
     <AbsoluteFill style={{backgroundColor: PALETTE.skyHorizon}}>
       <S01_City beats={beats} fr={fr} />
       <Finish fr={fr} />
-      {titles.map((t, i) => (
-        <Title key={i} text={t.text} opacity={t.o} rise={t.rise} />
-      ))}
-      {counter}
+      {text && titles.map((t, i) => <Title key={i} text={t.text} opacity={t.o} rise={t.rise} />)}
+      {text && counter}
       {audio ? <Audio src={staticFile(audio)} /> : null}
     </AbsoluteFill>
   );

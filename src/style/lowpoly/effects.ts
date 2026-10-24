@@ -18,6 +18,19 @@ const outBack = (t: number) => {
 };
 const c01 = (x: number) => Math.min(1, Math.max(0, x));
 
+// non-indexed, no uvs: so any of our primitives can be merged together
+const plain = (g: THREE.BufferGeometry) => {
+  const n = g.index ? g.toNonIndexed() : g;
+  n.deleteAttribute('uv');
+  return n;
+};
+
+// Instanced meshes here move their instances every frame; never cull them on a stale bounding sphere.
+const live = <T extends THREE.Object3D>(o: T) => {
+  o.traverse((c) => (c.frustumCulled = false));
+  return o;
+};
+
 const basic = (c: string, opts: THREE.MeshBasicMaterialParameters = {}) => new THREE.MeshBasicMaterial({color: col(c), fog: true, ...opts});
 
 // A cumulative level across a film's acts of one kind: each act eases the level to its amount.
@@ -38,19 +51,24 @@ const towers = (acts: Act[], {city, beats, seed}: Ctx): Effect => {
     cam.position.set(a.cam.x, 3.4, a.cam.z);
     cam.rotation.set(THREE.MathUtils.degToRad(-10), 0, 0);
     cam.updateMatrixWorld(true);
-    const cand: {idx: number; score: number}[] = [];
+    const near: {idx: number; score: number}[] = [], far: {idx: number; score: number}[] = [];
     records.forEach((b, idx) => {
       if (taken.has(idx)) return;
-      const w = city.toWorld(b.x, b.z).setY(SET.landY + b.h);
-      const p = w.clone().project(cam);
-      if (Math.abs(p.x) < 0.85 && p.y > -0.25 && p.y < 0.75 && p.z < 1) cand.push({idx, score: random(`${seed}:tw${idx}`)});
+      const p = city.toWorld(b.x, b.z).setY(SET.landY + b.h).project(cam);
+      if (Math.abs(p.x) > 0.92 || p.z > 1 || p.y < -0.3 || p.y > 0.95) return;
+      (b.far ? far : near).push({idx, score: random(`${seed}:tw${idx}`)});
     });
-    cand.sort((x, y) => x.score - y.score);
+    near.sort((x, y) => x.score - y.score);
+    far.sort((x, y) => x.score - y.score);
+    // most of the growth is the skyline shooting up; a few mid-ground blocks rise too
+    const nNear = Math.round(a.schedule.length * 0.25);
+    const picks = [...near.slice(0, nNear).map((c) => ({...c, k: 1.2 + random(`${seed}:tk${c.idx}`) * 1.3})), ...far.slice(0, a.schedule.length - nNear).map((c) => ({...c, k: 2.5 + random(`${seed}:tk${c.idx}`) * 4.5}))];
+    picks.sort((x, y) => x.score - y.score);
     a.schedule.forEach((at, j) => {
-      const c = cand[j];
+      const c = picks[j];
       if (!c) return;
       taken.add(c.idx);
-      grow.push({idx: c.idx, at, k: 1.4 + random(`${seed}:tk${c.idx}`) * 2.2});
+      grow.push({idx: c.idx, at, k: c.k});
     });
   }
   const m = new THREE.Matrix4();
@@ -106,15 +124,15 @@ const blackout = (acts: Act[], {city, seed}: Ctx): Effect => {
   farm.add(sign, post);
   // light strips on the two faces the camera sees
   const lights: THREE.Matrix4[] = [];
-  for (let r = 0; r < 3; r++) for (let c = 0; c < 6; c++) lights.push(mat4(-W / 2 + 0.16 + c * ((W - 0.32) / 5), 0.14 + r * 0.16, -D / 2 - 0.006, 0.11, 0.05, 0.01));
-  for (let r = 0; r < 3; r++) for (let c = 0; c < 2; c++) lights.push(mat4(W / 2 + 0.006, 0.14 + r * 0.16, -D / 4 + c * (D / 2), 0.01, 0.05, 0.11));
+  for (let r = 0; r < 3; r++) for (let c = 0; c < 6; c++) lights.push(mat4(-W / 2 + 0.16 + c * ((W - 0.32) / 5), 0.15 + r * 0.16, -D / 2 - 0.006, 0.15, 0.075, 0.01));
+  for (let r = 0; r < 3; r++) for (let c = 0; c < 2; c++) lights.push(mat4(W / 2 + 0.006, 0.15 + r * 0.16, -D / 4 + c * (D / 2), 0.01, 0.075, 0.15));
   const lg = box(1, 1, 1);
   lg.translate(0, -0.5, 0);
   const lamp = new THREE.InstancedMesh(lg, basic(PALETTE.serverLight), lights.length);
   lights.forEach((m, i) => lamp.setMatrixAt(i, m));
   farm.add(lamp);
   farm.position.set(L.x, land, L.z);
-  city.local.add(farm);
+  city.local.add(live(farm));
 
   const act = acts[0];
   // seeded order in which lights go out
@@ -139,23 +157,27 @@ const blackout = (acts: Act[], {city, seed}: Ctx): Effect => {
 const rockets = (acts: Act[], {city, seed, accent}: Ctx): Effect => {
   const act = acts[0];
   const n = act.schedule.length;
+  // pads in world space across the bay behind the bridge; any that would land on a bank move out
   const pads: THREE.Vector3[] = [];
-  for (let i = 0; i < n; i++) {
+  const onWater = (v: THREE.Vector3) => {
+    const l = city.local.worldToLocal(v.clone());
+    return l.z > SET.front + 0.6 || Math.abs(l.x) < SET.channel - 0.4;
+  };
+  for (let i = 0; pads.length < n && i < n * 4; i++) {
     const row = Math.floor(i / 4), c = i % 4;
-    const x = -4.2 + c * 2.8 + (row % 2) * 1.4 + (random(`${seed}:px${i}`) - 0.5) * 0.6;
-    const z = 8 + row * 5 + (random(`${seed}:pz${i}`) - 0.5) * 1.5;
-    pads.push(new THREE.Vector3(x, 0, z));
+    const v = new THREE.Vector3(-2.7 + c * 2.0 + (row % 2) * 0.9 + (random(`${seed}:px${i}`) - 0.5) * 0.5, 0, -13 - row * 4.2 - (random(`${seed}:pz${i}`) - 0.5) * 1.2);
+    if (onWater(v)) pads.push(v);
   }
-  const padGeo = mergeGeometries([new THREE.CylinderGeometry(0.34, 0.38, 0.5, 8).toNonIndexed().translate(0, -0.2, 0)]);
+  const padGeo = mergeGeometries([plain(new THREE.CylinderGeometry(0.34, 0.38, 0.5, 8)).translate(0, -0.2, 0)]);
   const padMesh = new THREE.InstancedMesh(padGeo, flat(col(PALETTE.pad)), n);
-  const ringMesh = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.2, 0.2, 0.012, 8).toNonIndexed().translate(0, 0.056, 0), flat(col(PALETTE.asphalt)), n);
-  const bodyGeo = mergeGeometries([new THREE.CylinderGeometry(0.055, 0.06, 0.6, 6).toNonIndexed().translate(0, 0.3, 0), (() => {
+  const ringMesh = new THREE.InstancedMesh(plain(new THREE.CylinderGeometry(0.2, 0.2, 0.012, 8)).translate(0, 0.056, 0), flat(col(PALETTE.asphalt)), n);
+  const bodyGeo = mergeGeometries([plain(new THREE.CylinderGeometry(0.055, 0.06, 0.6, 6)).translate(0, 0.3, 0), (() => {
     const fins = [0, 1, 2].map((k) => box(0.012, 0.12, 0.09, 0, 0, 0.07).rotateY((k * Math.PI * 2) / 3));
     return mergeGeometries(fins);
   })()]);
   const body = new THREE.InstancedMesh(bodyGeo, flat(col(PALETTE.rocket)), n);
-  const nose = new THREE.InstancedMesh(new THREE.ConeGeometry(0.058, 0.17, 6).toNonIndexed().translate(0, 0.685, 0), flat(col(accent)), n);
-  const flame = new THREE.InstancedMesh(new THREE.ConeGeometry(0.05, 0.22, 6).toNonIndexed().rotateX(Math.PI).translate(0, -0.11, 0), basic(PALETTE.flame), n);
+  const nose = new THREE.InstancedMesh(plain(new THREE.ConeGeometry(0.058, 0.17, 6)).translate(0, 0.685, 0), flat(col(accent)), n);
+  const flame = new THREE.InstancedMesh(plain(new THREE.ConeGeometry(0.05, 0.22, 6)).rotateX(Math.PI).translate(0, -0.11, 0), basic(PALETTE.flame), n);
   for (const m of [padMesh, ringMesh, body, nose]) {
     m.castShadow = true;
     m.receiveShadow = true;
@@ -164,7 +186,7 @@ const rockets = (acts: Act[], {city, seed, accent}: Ctx): Effect => {
   const puffs = new THREE.InstancedMesh(new THREE.IcosahedronGeometry(1, 0), flat(col(PALETTE.smoke)), n * (P + G));
   const grp = new THREE.Group();
   grp.add(padMesh, ringMesh, body, nose, flame, puffs);
-  city.local.add(grp);
+  city.group.add(live(grp));
 
   const A = 3.2 / 900; // m per frame^2 (3.2 m/s^2)
   const alt = (age: number) => (age <= 0 ? 0 : 0.5 * A * age * age);
@@ -254,7 +276,7 @@ const crowd = (acts: Act[], {city, beats, seed}: Ctx): Effect => {
   mesh.castShadow = true;
   mesh.receiveShadow = true;
   pts.forEach((_, i) => mesh.setColorAt(i, col(PALETTE.people[Math.floor(random(`${seed}:pc${i}`) * PALETTE.people.length)])));
-  city.local.add(mesh);
+  city.local.add(live(mesh));
   const hide = mat4(0, -50, 0, 0.0001, 0.0001, 0.0001);
   return {
     update: (e) => {
@@ -294,7 +316,7 @@ const particles = (n: number, geo: THREE.BufferGeometry, mat: THREE.Material, se
 
 const snow = (acts: Act[], {city, beats, seed, scene}: Ctx): Effect => {
   const flakes = particles(1600, new THREE.OctahedronGeometry(0.02, 0), basic(PALETTE.snow), seed, 0.03, 0.08);
-  scene.add(flakes.mesh);
+  scene.add(live(flakes.mesh));
   // cover: translucent white over the land tops and the roofs
   const mat = new THREE.MeshLambertMaterial({color: col(PALETTE.snow), flatShading: true, transparent: true, opacity: 0, depthWrite: false});
   const land = new THREE.Mesh(new THREE.PlaneGeometry(1, 1).rotateX(-Math.PI / 2), mat);
@@ -308,7 +330,7 @@ const snow = (acts: Act[], {city, beats, seed, scene}: Ctx): Effect => {
   const caps = new THREE.InstancedMesh(new THREE.PlaneGeometry(1, 1).rotateX(-Math.PI / 2), mat, city.records.length);
   city.records.forEach((b, i) => caps.setMatrixAt(i, mat4(b.x, SET.landY + b.h + 0.004, b.z, b.w, 1, b.d)));
   cover.add(caps);
-  city.local.add(cover);
+  city.local.add(live(cover));
   return {
     update: (e, cam) => {
       const a = acts.find((x) => e >= x.start - 10 && e < x.end + 10);
@@ -321,7 +343,7 @@ const snow = (acts: Act[], {city, beats, seed, scene}: Ctx): Effect => {
 const rain = (acts: Act[], {seed, scene}: Ctx): Effect => {
   const streak = box(0.005, 0.24, 0.005);
   const drops = particles(1800, streak, basic(PALETTE.rain, {transparent: true, opacity: 0.6}), seed, 0.42, 0);
-  scene.add(drops.mesh);
+  scene.add(live(drops.mesh));
   return {
     update: (e, cam) => {
       const a = acts.find((x) => e >= x.start - 10 && e < x.end + 10);

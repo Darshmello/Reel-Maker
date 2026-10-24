@@ -44,7 +44,7 @@ export const PALETTE = {
   desk: '#D9B8A8',
   laptop: '#C9CDD2',
   screen: '#E8F2FF',
-  phone: '#2A2B2E',
+  phone: '#C9CDD8', // light case so it reads against the black tee
 } as const;
 
 // Per-video accent (the one saturated colour). Spec files name one of these keys.

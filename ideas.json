@@ -8,13 +8,13 @@
     "hero": "darsh",
     "voice": "en-US-AndrewNeural",
     "duration": 36,
-    "intro": {"line": "What if Darsh actually locked in?", "anchor": "What if", "cam0": {"x": 0, "z": 12}, "cam": {"x": -0.2, "z": 11.4}},
+    "intro": {"line": "What if Darsh actually locked in?", "anchor": "What if", "cam0": {"x": 0, "z": 12}, "cam": {"x": -0.1, "z": 11.6}},
     "acts": [
       {
         "kind": "towers", "anchor": "Day one", "label": "Day 1: phone in a drawer",
         "line": "Day one. His phone goes in a drawer. No reels, no dilly-dallying. Nine straight hours of real work, and the city starts building itself.",
         "counter": {"label": "Hours locked in", "from": 0, "to": 9},
-        "cam": {"x": -0.5, "z": 9.2}, "amount": 30
+        "cam": {"x": -0.35, "z": 10.6}, "amount": 30
       },
       {
         "kind": "blackout", "anchor": "Day thirty", "label": "Day 30: a certain website shuts down",
