@@ -237,5 +237,161 @@
       "anchor": "And somehow",
       "title": "The rest of Earth: empty."
     }
+  },
+  {
+    "slug": "rain-40-days",
+    "seed": "city-04",
+    "title": "What if it rained for 40 days straight?",
+    "accent": "teal",
+    "weather": "overcast",
+    "hero": null,
+    "voice": "en-US-GuyNeural",
+    "duration": 36,
+    "intro": {
+      "line": "What if it rained for forty days straight, without stopping once?",
+      "anchor": "What if",
+      "cam0": {
+        "x": 0,
+        "z": 12
+      },
+      "cam": {
+        "x": 0.2,
+        "z": 11.4
+      }
+    },
+    "acts": [
+      {
+        "kind": "rain",
+        "anchor": "Day one",
+        "label": "Day 1",
+        "line": "Day one. It is just a rainy day. Umbrellas come out, the gutters overflow, and nobody is worried yet.",
+        "counter": {
+          "label": "Days of rain",
+          "from": 0,
+          "to": 1
+        },
+        "cam": {
+          "x": -0.3,
+          "z": 10.5
+        },
+        "amount": 0.15
+      },
+      {
+        "kind": "rain",
+        "anchor": "Day twenty",
+        "label": "Day 20",
+        "line": "Day twenty. The river climbs over the quays, the roads close, and the park turns into a lake.",
+        "counter": {
+          "label": "Days of rain",
+          "from": 1,
+          "to": 20
+        },
+        "cam": {
+          "x": 0.6,
+          "z": 11
+        },
+        "amount": 0.55
+      },
+      {
+        "kind": "rain",
+        "anchor": "Day forty",
+        "label": "Day 40",
+        "line": "Day forty. The water reaches the bridge deck, and the city is an island chain of rooftops.",
+        "counter": {
+          "label": "Days of rain",
+          "from": 20,
+          "to": 40
+        },
+        "cam": {
+          "x": 0,
+          "z": 13.5
+        },
+        "amount": 0.85
+      }
+    ],
+    "end": {
+      "line": "And then, finally, the sun comes back out.",
+      "anchor": "And then",
+      "title": "Then the sun came out."
+    }
+  },
+  {
+    "slug": "snow-month",
+    "seed": "city-05",
+    "title": "What if it snowed for a whole month?",
+    "accent": "mustard",
+    "weather": "clear",
+    "hero": null,
+    "voice": "en-AU-NatashaNeural",
+    "duration": 36,
+    "intro": {
+      "line": "What if this city got snow every single day for a whole month?",
+      "anchor": "What if",
+      "cam0": {
+        "x": 0,
+        "z": 12
+      },
+      "cam": {
+        "x": -0.2,
+        "z": 11.5
+      }
+    },
+    "acts": [
+      {
+        "kind": "snow",
+        "anchor": "Week one",
+        "label": "Week 1",
+        "line": "Week one. The first flakes fall, the parks go white, and everyone pretends it is still pretty.",
+        "counter": {
+          "label": "Snow depth",
+          "from": 0,
+          "to": 30,
+          "suffix": " cm"
+        },
+        "cam": {
+          "x": -0.4,
+          "z": 10.5
+        },
+        "amount": 0.45
+      },
+      {
+        "kind": "snow",
+        "anchor": "Week three",
+        "label": "Week 3",
+        "line": "Week three. Every roof and every street is buried, and the bridge is the only way across town.",
+        "counter": {
+          "label": "Snow depth",
+          "from": 30,
+          "to": 180,
+          "suffix": " cm"
+        },
+        "cam": {
+          "x": 0.5,
+          "z": 10.8
+        },
+        "amount": 1.0
+      },
+      {
+        "kind": "crowd",
+        "anchor": "Week four",
+        "label": "Week 4",
+        "line": "Week four. Schools are closed for good, and the whole city comes outside to build snowmen.",
+        "counter": {
+          "label": "Snowmen built",
+          "from": 0,
+          "to": 250000
+        },
+        "cam": {
+          "x": 0,
+          "z": 13.5
+        },
+        "amount": 2500
+      }
+    ],
+    "end": {
+      "line": "Honestly, it might be the best month this city ever had.",
+      "anchor": "Honestly",
+      "title": "Best month ever?"
+    }
   }
 ]

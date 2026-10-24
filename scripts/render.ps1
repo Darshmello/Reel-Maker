@@ -30,9 +30,19 @@ Step 'render' { npx remotion render WhatIf $raw "--props=$dir/props.json" --code
 $m = cmd /c "ffmpeg -hide_banner -nostats -i `"$raw`" -af loudnorm=I=-14:TP=-2:LRA=11:print_format=json -f null - 2>&1" | Out-String
 $j = [regex]::Match($m, '\{\s*"input_i"[\s\S]*?\}').Value | ConvertFrom-Json
 $ln = "loudnorm=I=-14:TP=-2:LRA=11:measured_I=$($j.input_i):measured_TP=$($j.input_tp):measured_LRA=$($j.input_lra):measured_thresh=$($j.input_thresh):offset=$($j.target_offset):linear=true"
-$af = "$ln,aresample=192000,alimiter=limit=0.75:attack=1:release=50:level=false,aresample=48000"
 $final = "out/$Slug.mp4"
 $secs = ((Get-Content ideas.json -Raw | ConvertFrom-Json) | Where-Object { $_.slug -eq $Slug }).duration
-Step 'loudnorm + faststart' { ffmpeg -v error -y -i $raw -c:v copy -af $af -ar 48000 -c:a aac -b:a 192k -t $secs -movflags +faststart $final }
+# AAC can overshoot the limiter on noisy material (rain): measure the encoded true peak and, if it is
+# over -1.5 dBTP, lower the limiter ceiling by the overshoot and encode again (loudness barely moves)
+$limitDb = -2.5
+for ($try = 1; $try -le 4; $try++) {
+  $limit = [math]::Round([math]::Pow(10, $limitDb / 20), 4)
+  $af = "$ln,aresample=192000,alimiter=limit=${limit}:attack=1:release=50:level=false,aresample=48000"
+  Step "loudnorm + faststart (limit $limitDb dB)" { ffmpeg -v error -y -i $raw -c:v copy -af $af -ar 48000 -c:a aac -b:a 192k -t $secs -movflags +faststart $final }
+  $e = cmd /c "ffmpeg -hide_banner -nostats -i `"$final`" -af ebur128=peak=true -f null - 2>&1" | Out-String
+  $tp = [double]([regex]::Match($e.Substring($e.LastIndexOf('Summary:')), 'Peak:\s+(-?[\d.]+)').Groups[1].Value)
+  if ($tp -le -1.7) { break }
+  $limitDb -= ($tp + 1.9)
+}
 Step 'qa' { & $py scripts/qa.py $Slug }
 Write-Host "done: $final"

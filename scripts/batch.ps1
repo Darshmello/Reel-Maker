@@ -4,6 +4,8 @@ param([switch]$KeepVo, [string[]]$Only)
 $ErrorActionPreference = 'Stop'
 Set-Location (Split-Path $PSScriptRoot -Parent)
 $ideas = Get-Content ideas.json -Raw | ConvertFrom-Json
+# powershell -File passes "-Only a,b" as one string: split it
+$Only = @($Only | ForEach-Object { $_ -split "," } | Where-Object { $_ })
 $rows = @()
 foreach ($idea in $ideas) {
   if ($Only -and ($Only -notcontains $idea.slug)) { continue }
