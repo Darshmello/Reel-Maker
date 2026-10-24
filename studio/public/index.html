@@ -203,6 +203,7 @@
             <button class="btn primary" id="setBuild" type="button">Build set</button>
           </div>
           <div class="prompt-foot">
+            <label class="inline">Writer <select id="setAgent"></select></label>
             <label class="inline">Variants <select id="setVariants"><option selected>1</option><option>2</option><option>3</option></select></label>
             <span class="spacer"></span>
             <a href="#/docs/set-packs" class="inline">How set packs work →</a>
@@ -396,8 +397,9 @@ powershell -ExecutionPolicy Bypass -File scripts/batch.ps1 -Only snow-month,rain
           <h2 class="h2s">Commands</h2>
           <pre class="cmd"><code>node scripts/check-set.mjs my-town          # lint, typecheck, render cover + probe
 node studio/setgen.mjs "a harbour town" harbour   # have your agent write one
-node scripts/seed-sets.mjs                   # regenerate the starter marketplace</code></pre>
-          <p>The probe render runs a server-farm blackout, towers, a crowd and rockets on the set, so you see every act working before a film uses it. Thumbnails land in <code>out/sets/&lt;id&gt;/</code>.</p>
+node scripts/seed-sets.mjs --agent=opencode  # regenerate the starter marketplace
+node scripts/thumbs.mjs                      # re-render every set's two previews</code></pre>
+          <p>The probe render runs a server-farm blackout, towers, a crowd and rockets on the set, so you see every act working before a film uses it. Thumbnails land in <code>out/sets/&lt;id&gt;/</code>. Any CLI writer in <b>Agents</b> can write a set: pick it on the Sets page or pass <code>--agent=&lt;id&gt;</code>.</p>
           <h2 class="h2s">Share a pack</h2>
           <p>Packs are plain files: share one by sending its folder, or open a pull request that adds <code>src/sets/&lt;id&gt;/</code> to the repository. Anyone who pulls it gets it in their Sets page after a check.</p>
         </article>

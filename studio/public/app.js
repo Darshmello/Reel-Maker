@@ -550,7 +550,11 @@ let AGENTS = {agents: [], selected: 'claude'};
 async function loadAgents() {
   AGENTS = await api('/api/agents');
   const cur = AGENTS.agents.find((a) => a.id === AGENTS.selected) ?? AGENTS.agents[0];
-  $('#agentPick').innerHTML = AGENTS.agents.map((a) => `<option value="${a.id}" ${a.id === cur?.id ? 'selected' : ''}>${esc(a.name)}${a.installed ? '' : ' (not found)'}</option>`).join('');
+  const opts = AGENTS.agents.map((a) => `<option value="${a.id}" ${a.id === cur?.id ? 'selected' : ''}>${esc(a.name)}${a.installed ? '' : ' (not found)'}</option>`).join('');
+  $('#agentPick').innerHTML = opts;
+  const keep = $('#setAgent').value;
+  $('#setAgent').innerHTML = opts;
+  if (AGENTS.agents.some((a) => a.id === keep)) $('#setAgent').value = keep;
   const st = $('#agentStatus');
   st.className = `agent-status ${cur?.installed ? 'ok' : 'bad'}`;
   st.textContent = cur?.builtin ? 'keyword draft, no agent' : cur?.installed ? 'found on PATH' : 'not installed: see Getting started';
@@ -807,9 +811,9 @@ $('#setPick').onclick = (e) => {
 };
 
 // generation jobs, shown on Create (for this film) and on Sets
-async function startSets(request, variants, base, home) {
+async function startSets(request, variants, base, home, agent) {
   try {
-    const j = await api('/api/sets/generate', {method: 'POST', body: {request, variants, base, agent: $('#agentPick').value}});
+    const j = await api('/api/sets/generate', {method: 'POST', body: {request, variants, base, agent: agent ?? $('#agentPick').value}});
     JOBS.set(j.id, j);
     JOB_HOME.set(j.id, home);
     renderJobs();
@@ -825,7 +829,7 @@ $('#buildSets').onclick = () => {
 $('#setBuild').onclick = () => {
   const p = $('#setPrompt').value.trim();
   if (!p) return $('#setPrompt').focus();
-  startSets(p, +$('#setVariants').value, undefined, 'sets');
+  startSets(p, +$('#setVariants').value, undefined, 'sets', $('#setAgent').value);
   $('#setPrompt').value = '';
 };
 $('#setPrompt').onkeydown = (e) => e.key === 'Enter' && $('#setBuild').click();

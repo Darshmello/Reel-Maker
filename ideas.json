@@ -60,7 +60,7 @@
         "counter": {
           "label": "Kardashev scale",
           "from": 0.73,
-          "to": 2.0,
+          "to": 2,
           "decimals": 2,
           "prefix": "Type "
         },
@@ -369,7 +369,7 @@
           "x": 0.5,
           "z": 10.8
         },
-        "amount": 1.0
+        "amount": 1
       },
       {
         "kind": "crowd",
@@ -393,5 +393,176 @@
       "anchor": "Honestly",
       "title": "Best month ever?"
     }
+  },
+  {
+    "slug": "the-whole-village-was-a",
+    "seed": "the-whole-village-was-a",
+    "title": "What if the whole village was a hotel?",
+    "accent": "orange",
+    "weather": "clear",
+    "hero": null,
+    "voice": "en-US-AndrewNeural",
+    "duration": 36,
+    "set": "alpine-village",
+    "scene": "Green alpine valley of wooden chalets with steep roofs clustered around a stone plaza and a small lake, where each cottage turned into a hotel with a striped sign in the accent colour, beds spilling from windows and hanging lanterns. Pine forests and jagged snow-capped mountains rise behind.",
+    "intro": {
+      "line": "What if the whole village was one giant hotel?",
+      "anchor": "What if",
+      "cam0": {
+        "x": 0,
+        "z": 12
+      },
+      "cam": {
+        "x": -0.1,
+        "z": 11.5
+      }
+    },
+    "acts": [
+      {
+        "kind": "crowd",
+        "anchor": "Day one",
+        "label": "Day 1: first house is a hotel",
+        "line": "Day one. The Millers cottage put up a big wooden sign and eight guests moved in.",
+        "counter": {
+          "label": "Guests",
+          "from": 8,
+          "to": 240
+        },
+        "shot": "standard",
+        "cam": {
+          "x": -0.35,
+          "z": 10.5
+        },
+        "amount": 240
+      },
+      {
+        "kind": "towers",
+        "anchor": "Week six",
+        "label": "Week 6: hotel towers rise",
+        "line": "Week six. Nine hotel towers shot up the hillside and the whole village started booking.",
+        "counter": {
+          "label": "Towers",
+          "from": 0,
+          "to": 9
+        },
+        "shot": "low",
+        "cam": {
+          "x": 0.6,
+          "z": 11,
+          "h": 2.1,
+          "tilt": -4
+        },
+        "amount": 9
+      },
+      {
+        "kind": "crowd",
+        "anchor": "Year two",
+        "label": "Year 2: valley full of hotels",
+        "line": "Year two. The whole valley became one giant hotel and six thousand guests are sleeping in the pines.",
+        "counter": {
+          "label": "Sleepers",
+          "from": 0,
+          "to": 6000
+        },
+        "shot": "aerial",
+        "cam": {
+          "x": 0,
+          "z": 14,
+          "h": 7.5,
+          "tilt": -25
+        },
+        "amount": 6000
+      }
+    ],
+    "end": {
+      "line": "Anyway. The village snapped back to cottages.",
+      "anchor": "Anyway",
+      "title": "It all went back to the cottages.",
+      "rewind": true
+    }
+  },
+  {
+    "slug": "you-ran-2x-speed-every",
+    "seed": "you-ran-2x-speed-every",
+    "title": "What if You ran 2x speed every 5 min",
+    "accent": "teal",
+    "weather": "clear",
+    "hero": "darsh",
+    "voice": "en-AU-NatashaNeural",
+    "duration": 36,
+    "intro": {
+      "line": "What if You ran 2x speed every 5 min",
+      "anchor": "What if",
+      "cam0": {
+        "x": 0,
+        "z": 12
+      },
+      "cam": {
+        "x": -0.1,
+        "z": 11.5
+      }
+    },
+    "acts": [
+      {
+        "kind": "crowd",
+        "anchor": "After 5",
+        "label": "5 min",
+        "line": "After 5 min you would travel {x} miles per hour",
+        "counter": {
+          "label": "0",
+          "from": 0,
+          "to": 100
+        },
+        "cam": {
+          "x": -0.35,
+          "z": 10.5
+        },
+        "amount": 700
+      },
+      {
+        "kind": "crowd",
+        "anchor": "After 1",
+        "label": "1 hr",
+        "line": "After 1 hr you would travel {x} miles per hour",
+        "counter": {
+          "label": "0",
+          "from": 0,
+          "to": 100
+        },
+        "cam": {
+          "x": 0.6,
+          "z": 11,
+          "h": 4.2,
+          "tilt": -11
+        },
+        "amount": 4400,
+        "shot": "wide"
+      },
+      {
+        "kind": "rockets",
+        "anchor": "Damn u",
+        "label": "Reach the moon",
+        "line": "Damn u still watching?",
+        "counter": {
+          "label": "0",
+          "from": 0,
+          "to": 100
+        },
+        "cam": {
+          "x": 0,
+          "z": 14,
+          "yaw": 0.38
+        },
+        "amount": 14,
+        "shot": "orbit-left"
+      }
+    ],
+    "end": {
+      "line": "Fazing through multiverses",
+      "anchor": "Fazing through",
+      "title": "Its Jover",
+      "rewind": false
+    },
+    "scene": "Have Me start In my house near San jose, so Like bay area subruban vibe on the road taking a walk"
   }
 ]
