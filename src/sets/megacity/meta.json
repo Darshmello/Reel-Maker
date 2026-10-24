@@ -1,0 +1,21 @@
+{
+  "id": "megacity",
+  "name": "Megacity",
+  "description": "A dense future metropolis of stacked pastel towers, an accent monorail weaving through the mid-ground, and a fountain plaza with trees near the camera.",
+  "biome": "metropolis",
+  "tags": [
+    "megacity",
+    "future",
+    "city",
+    "tower",
+    "monorail",
+    "skyline",
+    "plaza",
+    "urban",
+    "transit",
+    "dense"
+  ],
+  "author": "Reel Studio",
+  "status": "approved",
+  "prompt": "A dense future megacity: very tall towers stacked into the distance, an elevated monorail track in the accent colour weaving through, a plaza with a fountain and trees near the camera."
+}

@@ -1,0 +1,22 @@
+// Megacity colours. The only place this pack writes hex.
+export const P = {
+  ground: '#8A8578',
+  plaza: '#C8BBA6',
+  plazaLine: '#B3A591',
+  street: '#4F4D4B',
+  crosswalk: '#EFE7D6',
+  park: '#7FA05F',
+  building: ['#B8AE9F', '#A99E8E', '#C6BBA6', '#9A9183', '#B3A594'],
+  roof: '#7E7568',
+  winBand: '#41566B',
+  winLit: '#F0CC7C',
+  storeFront: '#6B5F52',
+  monorail: '#CFC7B8',
+  train: '#F4EFE6',
+  tree: ['#5E8546', '#6F9654', '#517B3D'],
+  trunk: '#7A6248',
+  hill: '#9AA389',
+  hillFar: '#B4BCA8',
+  water: '#7FB0D0',
+  car: ['#C4544A', '#5B7FA6', '#E2C56B', '#DFE3E6'],
+} as const;

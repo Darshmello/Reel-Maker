@@ -1,0 +1,24 @@
+{
+  "id": "moon-base",
+  "name": "Moon Base",
+  "description": "A white habitat cluster on a grey regolith plain: three domes on a lit walkway, a ribbed module, a solar array, a comms dish, a landed rocket and a rover, with the Earth hanging over the crater rim.",
+  "biome": "space",
+  "tags": [
+    "moon",
+    "space",
+    "base",
+    "domes",
+    "rocket",
+    "lander",
+    "astronaut",
+    "sci-fi",
+    "earth",
+    "crater",
+    "walk",
+    "night",
+    "future"
+  ],
+  "author": "opencode",
+  "status": "approved",
+  "prompt": "A moon base: white domes, a landed rocket, solar panels and the Earth in the sky"
+}

@@ -109,9 +109,12 @@ export const makeBeats = (spec: Spec, words: Word[]) => {
   };
   const prog = (e: number, a: Act) => clamp01((e - a.fxStart) / Math.max(1, a.fxEnd - a.fxStart));
 
-  // camera keys in world time: opening drift, then one move per act
-  const camKeys: [number, CamKey][] = [[0, spec.intro.cam0], [acts[0]?.start ?? endStart, spec.intro.cam]];
-  for (const a of acts) camKeys.push([a.start, camKeys[camKeys.length - 1][1]], [a.end - 6, a.cam]);
+  // camera keys in world time: opening drift, then one move per act. A hand-written spec (or one
+  // saved from the API) may omit the cams entirely, so every key falls back to the approved shot.
+  const camOpen: CamKey = spec.intro.cam0 ?? {x: 0, z: 12};
+  const camIntro: CamKey = spec.intro.cam ?? {x: -0.1, z: 11.5};
+  const camKeys: [number, CamKey][] = [[0, camOpen], [acts[0]?.start ?? endStart, camIntro]];
+  for (const a of acts) camKeys.push([a.start, camKeys[camKeys.length - 1][1]], [a.end - 6, a.cam ?? camIntro]);
 
   const events: SoundEvent[] = [];
   events.push({id: 'intro', fr: introAt, what: 'opening sting'});

@@ -1,0 +1,10 @@
+{
+  "id": "you-ran-2x-speed-every-b",
+  "name": "Ran 2x Speed",
+  "description": "A pastel Bay Area suburb of small houses and a long road where a walk begins, with a water tower in the accent colour behind the trees and distant hills in the haze.",
+  "biome": "suburban",
+  "tags": ["suburb", "houses", "road", "walk", "trees", "lawn", "water tower", "hills", "bay area", "san jose"],
+  "author": "Claude",
+  "status": "draft",
+  "prompt": "Have Me start In my house near San jose, so Like bay area subruban vibe on the road taking a walk (for the film: What if You ran 2x speed every 5 min)\nVariation: a different layout from the obvious one (landmark on the other side, a different street or shoreline pattern)."
+}

@@ -1,0 +1,20 @@
+{
+  "id": "suburbs",
+  "name": "Suburbs",
+  "description": "Curving streets of small pastel houses with lawns and fences, a school with a playing field, a water tower in the accent colour, a strip mall, and a downtown skyline in the haze.",
+  "biome": "suburban",
+  "tags": [
+    "suburb",
+    "houses",
+    "lawns",
+    "fences",
+    "school",
+    "strip-mall",
+    "skyline",
+    "water-tower",
+    "street"
+  ],
+  "author": "Reel Studio",
+  "status": "approved",
+  "prompt": "An American suburb: curving streets of small houses with lawns and fences, a school with a playing field, a water tower in the accent colour, a strip mall, a downtown skyline in the haze."
+}
