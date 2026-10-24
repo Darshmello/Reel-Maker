@@ -1,0 +1,21 @@
+{
+  "id": "canal-city",
+  "name": "Canal City",
+  "description": "A Venice-like city of terracotta and cream houses between narrow canals with arched footbridges and gondolas, a domed basilica with an accent-coloured dome on a piazza, and a hazy lagoon with islands behind.",
+  "biome": "canal city",
+  "tags": [
+    "venice",
+    "canal",
+    "city",
+    "gondola",
+    "bridge",
+    "basilica",
+    "lagoon",
+    "italy",
+    "boats",
+    "coastal"
+  ],
+  "author": "Claude",
+  "status": "draft",
+  "prompt": "A Venice-like canal city: terracotta and cream buildings along canals, arched footbridges, small boats, a domed basilica with a dome in the accent colour, a lagoon behind."
+}

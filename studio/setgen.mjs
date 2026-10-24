@@ -125,14 +125,14 @@ export async function generateSet(request, {agentId, id, log = () => {}, review 
     extra = `\nYour previous attempt failed these checks; fix them and return all three files again:\n- ${last.errors.join('\n- ')}\n\nPrevious index.ts:\n${files.index}\n\nPrevious palette.ts:\n${files.palette}\n`;
   }
   let reviewed = false;
-  if (last?.ok && review && agent.mode === 'claude-json') {
+  if (last?.ok && review && (agent.mode === 'claude-json' || agent.read)) {
     // one visual pass: the agent reads its own renders and either approves or returns revised files
     log('reviewing', 'the agent is looking at its renders');
     const dir = join(ROOT, 'out', 'sets', id);
     const cur = {palette: readFileSync(join(SETS, id, 'palette.ts'), 'utf8'), index: readFileSync(join(SETS, id, 'index.ts'), 'utf8')};
-    const ask = `${brief(request, id)}\n\nYou already wrote this pack; it passes the checks. Use the Read tool to look at cover.png (the film's first frame, the hero figure at a desk) and probe.png (after a server farm, growing towers, a crowd and rockets) in the current folder. Judge them against the composition rules: is the lower half filled with small readable things, is the landmark readable in the accent colour, is there depth, does it look like a calm pastel model? Start your reply with what you saw. If it is good, reply {"ok": true, "seen": "<one sentence: what the renders show>"}. Otherwise reply with revised files in the same JSON shape plus "seen".\n\nCurrent index.ts:\n${cur.index}\n\nCurrent palette.ts:\n${cur.palette}`;
+    const ask = `${brief(request, id)}\n\nYou already wrote this pack; it passes the checks. Use the Read tool to look at cover.png (the set's opening frame) and probe.png (after a server farm, growing towers, a crowd and rockets) in the current folder. Judge them against the composition rules: is the lower half filled with small readable things, is the landmark readable in the accent colour, is there depth, does it look like a calm pastel model? Start your reply with what you saw. If it is good, reply {"ok": true, "seen": "<one sentence: what the renders show>"}. Otherwise reply with revised files in the same JSON shape plus "seen".\n\nCurrent index.ts:\n${cur.index}\n\nCurrent palette.ts:\n${cur.palette}`;
     try {
-      const cmd = agent.command.replace('--tools ""', '--tools Read --allowedTools Read');
+      const cmd = agent.mode === 'claude-json' ? agent.command.replace('--tools ""', '--tools Read --allowedTools Read') : agent.command;
       const r = await runAgent(agent, ask, {ms: 420000, cwd: dir, command: cmd, test: (o) => o.ok === true || isFiles(o)});
       reviewed = true;
       log('reviewing', `${isFiles(r) ? 'revising' : 'approved'}: ${String(r.seen ?? '').slice(0, 200)}`);

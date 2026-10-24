@@ -39,7 +39,8 @@ A local dashboard (no dependencies, bound to 127.0.0.1) over the same pipeline:
   it (1-3 variants), learning from the closest packs in the marketplace. Every pack is linted, typechecked
   and rendered inside a probe film (`scripts/check-set.mjs`) before it can be picked. Packs can be written
   by hand, pasted in, or shared as a folder / pull request. `node scripts/seed-sets.mjs` regenerates the
-  starter marketplace.
+  starter marketplace (`--agent=<id>` picks the writer; default is the one selected in the studio), and
+  `node scripts/thumbs.mjs` re-renders every set's cover and probe in one bundle.
 - **Docs:** step-by-step setup (Claude Code and opencode), start from a template, connecting agents,
   the act library, command line, troubleshooting.
 

@@ -1,8 +1,8 @@
 {
   "_help": "Writers for 'Build the acts'. Each runs a CLI agent you are already logged into; no API keys. {promptFile} is replaced by a temp file holding the full brief; without it the brief goes to stdin. Agents run in an empty temp folder. Your choice and any custom agents live in agents.local.json.",
   "agents": [
-    {"id": "claude", "name": "Claude Code", "command": "claude -p --output-format json --tools \"\" --no-session-persistence --strict-mcp-config --setting-sources \"\" --model sonnet", "mode": "claude-json"},
-    {"id": "opencode", "name": "opencode", "command": "opencode run -f {promptFile} \"Follow the brief in the attached file. Reply with only the JSON object.\""},
+    {"id": "claude", "name": "Claude Code", "command": "claude -p --output-format json --tools \"\" --no-session-persistence --strict-mcp-config --setting-sources \"\" --model sonnet", "mode": "claude-json", "read": true},
+    {"id": "opencode", "name": "opencode", "command": "opencode run -f {promptFile} \"Follow the brief in the attached file. Reply with only the JSON object.\"", "read": true},
     {"id": "codex", "name": "Codex CLI", "command": "codex exec --skip-git-repo-check -"},
     {"id": "gemini", "name": "Gemini CLI", "command": "gemini -p \"Follow the brief on stdin. Reply with only the JSON object.\""},
     {"id": "offline", "name": "Offline draft", "builtin": true}

@@ -40,8 +40,9 @@ export const lintSet = (id) => {
   return errors;
 };
 
-// a 12 s probe film: synthetic word timings so every cue resolves without a voiceover
-const probeProps = (id, accent = 'teal') => {
+// a 12 s probe film: synthetic word timings so every cue resolves without a voiceover.
+// hero is null on purpose: a set preview shows the place, not the film's hero.
+export const probeProps = (id, accent = 'teal') => {
   const lines = [['What if', 'we tested this set'], ['Day one', 'the servers'], ['Day two', 'the towers'], ['Day three', 'the people'], ['Day four', 'the rockets'], ['Anyway', 'that is the set']];
   const starts = [0.2, 1.0, 3.2, 5.4, 7.6, 10.4];
   const words = [];
