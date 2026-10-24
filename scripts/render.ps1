@@ -23,8 +23,9 @@ Step 'cues + events' { node --no-warnings scripts/dump-events.mjs $Slug }
 Step 'mix' { & $py scripts/mix.py $Slug }
 Step 'props' { node scripts/props.mjs $Slug; node scripts/props.mjs $Slug --no-text }
 Step 'sets registry' { node scripts/sets-registry.mjs }
-# the default words for `remotion studio` and manual stills: always the film just rendered, not film 0
-if (Test-Path "$dir/words.json") { Copy-Item "$dir/words.json" src/film/words.json }
+# src/film/words.json is the default props for `remotion studio` and manual stills, and it is paired
+# with ideas.json[0] in src/Root.tsx: refresh it only when film 0 is the one just rendered.
+if ($Slug -eq (Get-Content ideas.json -Raw | ConvertFrom-Json)[0].slug) { Copy-Item "$dir/words.json" src/film/words.json }
 Step 'render' { npx remotion render WhatIf $raw "--props=$dir/props.json" --codec=h264 --crf=18 --pixel-format=yuv420p --audio-codec=aac --log=error }
 }
 

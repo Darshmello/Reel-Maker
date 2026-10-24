@@ -27,6 +27,7 @@
       <p class="side-group">Docs</p>
       <a href="#/docs/getting-started"><span>Getting started</span></a>
       <a href="#/docs/templates"><span>Start from a template</span></a>
+      <a href="#/docs/plan"><span>Plan, review, generate</span></a>
       <a href="#/docs/agents"><span>Connect an agent</span></a>
       <a href="#/docs/acts"><span>Act library</span></a>
       <a href="#/docs/set-packs"><span>Build a set pack</span></a>
@@ -329,6 +330,34 @@ npm ci</code></pre>
           </div>
         </article>
 
+        <article data-doc="plan" hidden>
+          <p class="crumb">Docs / Plan, review, generate</p>
+          <h1 class="h1">Plan, review, generate</h1>
+          <p class="sub">A film is written before it is rendered. The writer returns a plan you can read and change, and you watch it work.</p>
+
+          <h2 class="h2s">1. Write a brief, not a headline</h2>
+          <p>One sentence is enough for a title; two or three give the writer something to build. Say what changes, where it happens, and how far it should go. The <b>How to explain it</b> panel on Create has a short guide and a worked example.</p>
+          <pre class="cmd"><code>What if every rooftop in the city became a garden?
+Start on one balcony, then a whole street, then the skyline.
+Keep it warm and a bit funny; end on the rent going up.</code></pre>
+
+          <h2 class="h2s">2. Read the plan</h2>
+          <p>The writer answers with the title, a one-line pitch, the place the film happens, and <b>one to five acts</b>. Each act carries its narration line, the word the camera cuts on, the on-screen counter, the kind of change and <i>why</i> that beat earns its place. The card shows the act count, the duration the script needs, the word budget, the accent and weather, the set and the voice. The film length is not fixed: about 2.6 spoken words per second plus a gap per line, clamped to 20-75 s.</p>
+          <p>The checks run before you see the card: anchors must resolve to exactly one word in the script, in order, and the script must fit the duration. A failing plan says what to fix and disables <b>Generate this film</b>.</p>
+
+          <h2 class="h2s">3. Watch the writer work</h2>
+          <p>The log under the plan is the real thing, streamed from the studio server: the exact command line, the folder and timeout, every line the CLI prints, the JSON it returned, the check results and the final word count. If a writer takes a minute to answer, the panel stays on <b>spawning</b> - that is the agent thinking, not a stuck page.</p>
+          <ul class="doc-list">
+            <li><b>Generate this film</b> saves the plan to <code>ideas.json</code> and starts the render (15-20 minutes, then 16 QA checks).</li>
+            <li><b>Open in the editor</b> puts the plan in the composer and dismisses the card, so hand edits can never be overwritten by the draft.</li>
+            <li><b>Draft again</b> re-runs the writer with the brief in the box (edit it first if you want a different take).</li>
+            <li><b>Skip the review</b> in the composer goes straight to editing without a card, for when you already know the script.</li>
+          </ul>
+
+          <h2 class="h2s">4. If the writer fails</h2>
+          <p>Any writer can run out of quota, time out or print prose instead of JSON. The studio retries once with the failed checks, then falls back to the <b>Offline draft</b> writer and says so on the card. Pick another writer on Create (or on Sets) and draft again; the same plan format comes back. Nothing here needs an API key, and a set pack can be built by any writer.</p>
+        </article>
+
         <article data-doc="templates" hidden>
           <p class="crumb">Docs / Start from a template</p>
           <h1 class="h1">Start from a template</h1>
@@ -360,7 +389,7 @@ npm ci</code></pre>
         <article data-doc="acts" hidden>
           <p class="crumb">Docs / Act library</p>
           <h1 class="h1">Act library</h1>
-          <p class="sub">Each act shows exactly one change to the city. Kinds can repeat with rising intensity; act three should be the biggest.</p>
+          <p class="sub">Each act shows exactly one change to the city. Kinds can repeat with rising intensity; the last act should be the biggest.</p>
           <div class="kind-table" id="kindTable"></div>
         </article>
 
