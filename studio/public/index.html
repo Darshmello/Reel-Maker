@@ -1,0 +1,182 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Reel Studio</title>
+<meta name="description" content="One sentence in, a finished low-poly 3D Reel out.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,500;0,600;1,500&family=Instrument+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/style.css">
+<link rel="icon" href="/cube.svg" type="image/svg+xml">
+</head>
+<body>
+<header class="nav">
+  <a class="brand" href="#top"><img src="/cube.svg" alt="" width="26" height="26"><span>Reel Studio</span></a>
+  <nav>
+    <a href="#films">Films</a>
+    <a href="#how">How it works</a>
+    <a href="#studio">Studio</a>
+  </nav>
+  <button class="pill" id="jobPill" hidden></button>
+</header>
+
+<main id="top">
+  <section class="hero">
+    <div class="hero-sky" aria-hidden="true"></div>
+    <div class="hero-copy">
+      <h1>One sentence in.<br><em>A finished Reel out.</em></h1>
+      <p class="lede">Low-poly 3D “what if” films, rendered from code. Write the question. Reel Studio voices it, times every beat to the narration, builds the city in real three.js geometry and masters a 36-second vertical film that is ready to post. No AI video models. Every frame renders the same way twice.</p>
+      <div class="cta">
+        <a class="btn primary" href="#studio">Make a film</a>
+        <a class="btn ghost" href="#films">Watch the films</a>
+      </div>
+      <dl class="stats" id="stats">
+        <div><dt>Films</dt><dd id="statFilms">–</dd></div>
+        <div><dt>QA checks</dt><dd id="statQa">–</dd></div>
+        <div><dt>Loudness</dt><dd>−14 LUFS</dd></div>
+        <div><dt>Format</dt><dd>1080×1920</dd></div>
+      </dl>
+    </div>
+    <div class="hero-phone">
+      <div class="phone big">
+        <video id="heroVideo" muted loop playsinline autoplay preload="auto"></video>
+        <button class="sound" id="heroSound" aria-label="Turn sound on">Sound off</button>
+      </div>
+      <span class="chip c1">30 fps · H.264 CRF 18</span>
+      <span class="chip c2">16/16 QA</span>
+      <span class="chip c3">frame-identical re-renders</span>
+    </div>
+  </section>
+
+  <section class="section" id="films">
+    <div class="section-head">
+      <p class="eyebrow">The library</p>
+      <h2>Every film is one entry in <code>ideas.json</code></h2>
+      <p class="sub">Hover to preview. Each one was made by editing a spec only; no code changed between them.</p>
+    </div>
+    <div class="grid" id="grid"></div>
+  </section>
+
+  <section class="section how" id="how">
+    <div class="section-head">
+      <p class="eyebrow">The pipeline</p>
+      <h2>Six steps, one command</h2>
+    </div>
+    <ol class="steps">
+      <li><span>01</span><h3>Write</h3><p>A spec: the question, three acts, an ending. Each act picks one change from the library.</p></li>
+      <li><span>02</span><h3>Voice</h3><p>edge-tts reads the script, paced so the narration lands 1.6 s before the cut. Or drop in your own recording.</p></li>
+      <li><span>03</span><h3>Align</h3><p>faster-whisper finds when every word is said, then maps it back to the script's spelling.</p></li>
+      <li><span>04</span><h3>Cue</h3><p>Every cut, label and effect is timed from an anchor phrase, so a new voiceover re-times the whole film.</p></li>
+      <li><span>05</span><h3>Render</h3><p>Remotion draws the three.js city frame by frame. Seeded, deterministic, no clocks.</p></li>
+      <li><span>06</span><h3>Master + QA</h3><p>Two-pass loudnorm to −14 LUFS, true peak under −1.5 dBTP, then 16 checks: safe zones, cover, determinism.</p></li>
+    </ol>
+  </section>
+
+  <section class="section studio" id="studio">
+    <div class="section-head">
+      <p class="eyebrow">Studio</p>
+      <h2>Write a new film</h2>
+      <p class="sub">Start from a film you like or from scratch. The preview shows where the text lands inside the Reels safe zones.</p>
+    </div>
+
+    <div class="composer">
+      <form id="form" autocomplete="off">
+        <div class="bar">
+          <label class="inline">Start from
+            <select id="template"></select>
+          </label>
+          <span class="mode" id="mode"></span>
+        </div>
+
+        <fieldset class="card">
+          <legend><b>1</b> The question</legend>
+          <input class="title-input" id="title" placeholder="What if it snowed for a month?" maxlength="80">
+          <div class="row">
+            <div class="field grow"><span>Accent</span><div class="swatches" id="accents"></div></div>
+            <div class="field grow"><span>Weather</span><div class="tiles" id="weather"></div></div>
+          </div>
+          <div class="row">
+            <label class="field"><span>Voice</span><select id="voice"></select></label>
+            <label class="field small"><span>Seconds</span><input id="duration" type="number" min="20" max="60" step="1"></label>
+            <label class="toggle"><input type="checkbox" id="hero"><i></i><span>Put Darsh in it</span></label>
+          </div>
+          <details class="adv"><summary>File name and seed</summary>
+            <div class="row">
+              <label class="field grow"><span>Slug</span><input id="slug" spellcheck="false"></label>
+              <label class="field grow"><span>Seed</span><input id="seed" spellcheck="false"></label>
+            </div>
+          </details>
+        </fieldset>
+
+        <fieldset class="card">
+          <legend><b>2</b> Opening line</legend>
+          <div class="line-field" data-line="intro"></div>
+        </fieldset>
+
+        <div class="acts" id="acts"></div>
+        <button type="button" class="btn ghost add" id="addAct">+ Add an act</button>
+
+        <fieldset class="card">
+          <legend><b id="endNo">4</b> Ending</legend>
+          <div class="line-field" data-line="end"></div>
+          <div class="row">
+            <label class="field grow"><span>End card title</span><input id="endTitle" maxlength="60"></label>
+            <label class="toggle"><input type="checkbox" id="rewind"><i></i><span>Rewind and loop</span></label>
+          </div>
+        </fieldset>
+      </form>
+
+      <aside class="preview">
+        <div class="sticky">
+          <div class="phone" id="pv">
+            <svg viewBox="0 0 1080 1920" preserveAspectRatio="none" id="pvArt" aria-hidden="true"></svg>
+            <div class="pv-title" id="pvTitle"></div>
+            <div class="pv-counter" id="pvCounter"><b></b><span></span></div>
+            <div class="pv-zones" id="pvZones"><i class="z-top"></i><i class="z-bottom"></i><i class="z-rail"></i></div>
+          </div>
+          <div class="scrub" id="scrub"></div>
+          <label class="toggle tiny"><input type="checkbox" id="zones" checked><i></i><span>Show Reels dead zones</span></label>
+          <div class="meter"><div class="meter-bar"><i id="meterFill"></i></div><span id="meterText"></span></div>
+          <ul class="issues" id="issues"></ul>
+          <div class="actions">
+            <label class="toggle tiny"><input type="checkbox" id="keepVo"><i></i><span>Reuse the last voiceover</span></label>
+            <button class="btn ghost" id="save" type="button">Save spec</button>
+            <button class="btn primary" id="saveRender" type="button">Save and render</button>
+          </div>
+          <p class="note" id="saveNote"></p>
+        </div>
+      </aside>
+    </div>
+  </section>
+</main>
+
+<footer class="foot">
+  <p><b>Reel Studio</b> runs locally on 127.0.0.1. Nothing is uploaded or posted. Voice is an edge-tts placeholder; music and effects are synthesized.</p>
+  <p>Remotion · three.js · faster-whisper · ffmpeg. Audio DSP adapted from <a href="https://github.com/goodnight000/cstack">cstack</a> (MIT).</p>
+</footer>
+
+<div class="dock" id="dock" hidden>
+  <div class="dock-head">
+    <div><p class="eyebrow" id="dockState">Rendering</p><h3 id="dockTitle"></h3></div>
+    <div class="dock-time" id="dockTime">0:00</div>
+    <button class="icon" id="dockLog" aria-label="Show log">Log</button>
+    <button class="icon" id="dockClose" aria-label="Hide">×</button>
+  </div>
+  <ol class="dock-steps" id="dockSteps"></ol>
+  <pre class="dock-tail" id="dockTail" hidden></pre>
+</div>
+
+<div class="modal" id="modal" hidden>
+  <div class="modal-body">
+    <button class="icon close" id="modalClose" aria-label="Close">×</button>
+    <div class="phone big"><video id="modalVideo" controls playsinline></video></div>
+    <div class="modal-info" id="modalInfo"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast" hidden></div>
+<script src="/app.js" type="module"></script>
+</body>
+</html>

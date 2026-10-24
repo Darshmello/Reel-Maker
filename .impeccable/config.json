@@ -1,0 +1,32 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "overused-font",
+        "value": "instrument sans",
+        "createdAt": "2026-10-24T06:58:03.131Z",
+        "reason": "Claude: UI body face only; display face is EB Garamond, the same face the films' titles use"
+      },
+      {
+        "rule": "pulsing-dot",
+        "value": "*",
+        "files": [
+          "studio/public/index.html"
+        ],
+        "createdAt": "2026-10-24T06:58:11.171Z",
+        "reason": "Claude: the nav dot shows a real render job running; it goes static green/red when the job ends"
+      },
+      {
+        "rule": "marquee",
+        "value": "*",
+        "files": [
+          "studio/public/index.html"
+        ],
+        "createdAt": "2026-10-24T06:58:12.804Z",
+        "reason": "Claude: only remaining loop is the indeterminate progress bar on the live render step (ticker removed)"
+      }
+    ]
+  }
+}

@@ -18,6 +18,17 @@ Remotion from code: deterministic, re-renderable, batchable. No AI video models,
   rumbles, rocket roars, server clicks, a notification ping). All synthetic, timed from the same
   events the picture uses.
 
+## Reel Studio (the front end)
+
+```powershell
+npm run studio      # then open http://127.0.0.1:4321
+```
+
+A local page (no dependencies, bound to 127.0.0.1) over the same pipeline: watch every film with its
+QA results, edit or remix a spec in a form with a live 9:16 safe-zone preview, check anchors and
+script length before rendering, and start a render with a progress dock and log. It reads and writes
+`ideas.json` and runs `scripts/render.ps1`, one render at a time. Code: `studio/`.
+
 ## Make a film
 
 ```powershell

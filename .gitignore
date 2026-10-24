@@ -7,3 +7,4 @@ public/vo/*.wav
 !public/vo/*.user.*
 src/film/*.tmp
 __pycache__/
+.impeccable/hook.cache.json
