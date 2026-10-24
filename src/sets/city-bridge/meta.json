@@ -1,0 +1,9 @@
+{
+  "id": "city-bridge",
+  "name": "Bridge City",
+  "description": "A pastel city on a channel, a suspension bridge in the accent colour, a waterfront park and a skyline across the bay.",
+  "biome": "coastal city",
+  "tags": ["city", "bridge", "river", "skyline", "park", "default"],
+  "author": "Reel Studio",
+  "status": "approved"
+}

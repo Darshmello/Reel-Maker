@@ -5,11 +5,11 @@ import {random} from 'remotion';
 import {mergeGeometries} from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import type {Act, Beats} from '../../film/beats';
 import {PALETTE, col} from './palette';
-import {City, SERVER_LOT, SET} from './city';
+import type {SetBuild} from '../../sets/types';
 import {box, chamferBox, flat, mat4} from './props';
 
 export type Effect = {update: (e: number, cam: THREE.Vector3) => void};
-type Ctx = {city: City; beats: Beats; seed: string; accent: string; scene: THREE.Scene};
+type Ctx = {city: SetBuild; beats: Beats; seed: string; accent: string; scene: THREE.Scene};
 
 const smooth = (t: number) => t * t * (3 - 2 * t);
 const outBack = (t: number) => {
@@ -41,8 +41,9 @@ export const level = (e: number, acts: Act[], beats: Beats, base = 0) => {
 };
 
 // ---------------------------------------------------------------- towers: the city builds itself
-const towers = (acts: Act[], {city, beats, seed}: Ctx): Effect => {
+const towers = (acts: Act[], {city, seed}: Ctx): Effect => {
   const {records, buildings} = city;
+  if (!buildings) return {update: () => {}};
   const cam = new THREE.PerspectiveCamera(24, 1080 / 1920, 0.1, 400);
   const grow: {idx: number; at: number; k: number}[] = [];
   const taken = new Set<number>();
@@ -54,7 +55,7 @@ const towers = (acts: Act[], {city, beats, seed}: Ctx): Effect => {
     const near: {idx: number; score: number}[] = [], far: {idx: number; score: number}[] = [];
     records.forEach((b, idx) => {
       if (taken.has(idx)) return;
-      const p = city.toWorld(b.x, b.z).setY(SET.landY + b.h).project(cam);
+      const p = city.toWorld(b.x, b.z).setY(city.landY + b.h).project(cam);
       if (Math.abs(p.x) > 0.92 || p.z > 1 || p.y < -0.3 || p.y > 0.95) return;
       (b.far ? far : near).push({idx, score: random(`${seed}:tw${idx}`)});
     });
@@ -78,7 +79,7 @@ const towers = (acts: Act[], {city, beats, seed}: Ctx): Effect => {
         const b = records[g.idx];
         const t = c01((e - g.at) / 40);
         const h = b.h * (1 + g.k * (t > 0 ? outBack(t) : 0));
-        buildings.setMatrixAt(g.idx, m.copy(mat4(b.x, SET.landY, b.z, b.w, h, b.d)));
+        buildings.setMatrixAt(g.idx, m.copy(mat4(b.x, city.landY, b.z, b.w, h, b.d)));
       }
       buildings.instanceMatrix.needsUpdate = true;
     },
@@ -104,7 +105,7 @@ const signTexture = (lit: boolean) => {
 };
 
 const blackout = (acts: Act[], {city, seed}: Ctx): Effect => {
-  const L = SERVER_LOT, land = SET.landY;
+  const L = city.lot, land = city.landY;
   const W = L.hx * 2 - 0.1, D = L.hz * 2 - 0.08, H = 0.62;
   const farm = new THREE.Group();
   const body = new THREE.Mesh(chamferBox(W, H, D, 0.03), flat(col(PALETTE.server)));
@@ -157,16 +158,13 @@ const blackout = (acts: Act[], {city, seed}: Ctx): Effect => {
 const rockets = (acts: Act[], {city, seed, accent}: Ctx): Effect => {
   const act = acts[0];
   const n = act.schedule.length;
-  // pads in world space across the bay behind the bridge; any that would land on a bank move out
+  // pads in world space in the set's pad band; spots the set rejects are skipped
   const pads: THREE.Vector3[] = [];
-  const onWater = (v: THREE.Vector3) => {
-    const l = city.local.worldToLocal(v.clone());
-    return l.z > SET.front + 0.6 || Math.abs(l.x) < SET.channel - 0.4;
-  };
+  const B = city.pads, step = (B.x1 - B.x0) / 3;
   for (let i = 0; pads.length < n && i < n * 4; i++) {
     const row = Math.floor(i / 4), c = i % 4;
-    const v = new THREE.Vector3(-2.7 + c * 2.0 + (row % 2) * 0.9 + (random(`${seed}:px${i}`) - 0.5) * 0.5, 0, -13 - row * 4.2 - (random(`${seed}:pz${i}`) - 0.5) * 1.2);
-    if (onWater(v)) pads.push(v);
+    const v = new THREE.Vector3(B.x0 + c * step + (row % 2) * 0.45 * step + (random(`${seed}:px${i}`) - 0.5) * 0.5, 0, B.z - row * 4.2 - (random(`${seed}:pz${i}`) - 0.5) * 1.2);
+    if (B.ok(v)) pads.push(v);
   }
   const padGeo = mergeGeometries([plain(new THREE.CylinderGeometry(0.34, 0.38, 0.5, 8)).translate(0, -0.2, 0)]);
   const padMesh = new THREE.InstancedMesh(padGeo, flat(col(PALETTE.pad)), n);
@@ -250,27 +248,28 @@ const crowd = (acts: Act[], {city, beats, seed}: Ctx): Effect => {
   const N = Math.max(...acts.map((a) => a.amount ?? 0));
   // fill order: the park, then streets and the bridge, then rooftops and promenades
   const pts: {x: number; y: number; z: number}[] = [];
+  const W = city.walk.length;
   const inRect = (rIdx: number, i: number) => {
-    const R = city.walk[rIdx];
-    return {x: THREE.MathUtils.lerp(R.x0, R.x1, random(`${seed}:cx${rIdx}:${i}`)), y: R.y ?? SET.landY, z: THREE.MathUtils.lerp(R.z0, R.z1, random(`${seed}:cz${rIdx}:${i}`))};
+    const R = city.walk[rIdx % W];
+    return {x: THREE.MathUtils.lerp(R.x0, R.x1, random(`${seed}:cx${rIdx}:${i}`)), y: R.y ?? city.landY, z: THREE.MathUtils.lerp(R.z0, R.z1, random(`${seed}:cz${rIdx}:${i}`))};
   };
   const first = Math.round(N * 0.14), second = Math.round(N * 0.3);
   for (let i = 0; i < first; i++) pts.push(inRect(0, i));
-  const area = city.walk.slice(1, 6).map((R) => Math.abs((R.x1 - R.x0) * (R.z1 - R.z0)));
+  const area = (W > 1 ? city.walk.slice(1, 6) : city.walk).map((R) => Math.abs((R.x1 - R.x0) * (R.z1 - R.z0)));
   const tot = area.reduce((a, b) => a + b, 0);
   for (let i = 0; i < second; i++) {
     let u = random(`${seed}:cr${i}`) * tot, k = 0;
     while (k < area.length - 1 && u > area[k]) u -= area[k++];
-    pts.push(inRect(k + 1, i));
+    pts.push(inRect(W > 1 ? k + 1 : 0, i));
   }
   const roofs = city.records.map((b, idx) => ({b, idx})).filter(({b}) => !b.far && Math.abs(b.z) < 14 && Math.abs(b.x) < 9);
   for (let i = pts.length; i < N; i++) {
-    if (i % 5 === 0) {
-      pts.push(inRect(6 + (i % 2), i));
+    if (i % 5 === 0 || !roofs.length) {
+      pts.push(inRect(W > 6 ? 6 + (i % 2) : i % W, i));
       continue;
     }
     const {b} = roofs[Math.floor(random(`${seed}:rf${i}`) * roofs.length)];
-    pts.push({x: b.x + (random(`${seed}:rx${i}`) - 0.5) * (b.w - 0.08), y: SET.landY + b.h, z: b.z + (random(`${seed}:rz${i}`) - 0.5) * (b.d - 0.08)});
+    pts.push({x: b.x + (random(`${seed}:rx${i}`) - 0.5) * (b.w - 0.08), y: city.landY + b.h, z: b.z + (random(`${seed}:rz${i}`) - 0.5) * (b.d - 0.08)});
   }
   const mesh = new THREE.InstancedMesh(personGeo(), flat(), N);
   mesh.castShadow = true;
@@ -321,14 +320,15 @@ const snow = (acts: Act[], {city, beats, seed, scene}: Ctx): Effect => {
   const mat = new THREE.MeshLambertMaterial({color: col(PALETTE.snow), flatShading: true, transparent: true, opacity: 0, depthWrite: false});
   const land = new THREE.Mesh(new THREE.PlaneGeometry(1, 1).rotateX(-Math.PI / 2), mat);
   const cover = new THREE.Group();
-  for (const [x0, x1, z0, z1] of [[0.95, 40, -260, 3], [-40, -0.95, -260, 3], [-90, 90, 85, 215]]) {
+  for (const {x0, x1, z0, z1} of city.snow) {
     const m = land.clone();
     m.scale.set(x1 - x0, 1, z1 - z0);
-    m.position.set((x0 + x1) / 2, SET.landY + 0.004, (z0 + z1) / 2);
+    m.position.set((x0 + x1) / 2, city.landY + 0.004, (z0 + z1) / 2);
     cover.add(m);
   }
-  const caps = new THREE.InstancedMesh(new THREE.PlaneGeometry(1, 1).rotateX(-Math.PI / 2), mat, city.records.length);
-  city.records.forEach((b, i) => caps.setMatrixAt(i, mat4(b.x, SET.landY + b.h + 0.004, b.z, b.w, 1, b.d)));
+  const caps = new THREE.InstancedMesh(new THREE.PlaneGeometry(1, 1).rotateX(-Math.PI / 2), mat, Math.max(1, city.records.length));
+  caps.count = city.records.length;
+  city.records.forEach((b, i) => caps.setMatrixAt(i, mat4(b.x, city.landY + b.h + 0.004, b.z, b.w, 1, b.d)));
   cover.add(caps);
   city.local.add(live(cover));
   return {

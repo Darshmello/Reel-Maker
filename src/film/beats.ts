@@ -24,6 +24,7 @@ export type Spec = {
   accent: 'red' | 'orange' | 'teal' | 'violet' | 'mustard';
   weather: 'clear' | 'overcast' | 'golden';
   hero: 'darsh' | null;
+  set?: string; // set pack id under src/sets/ (default city-bridge)
   voice: string;
   duration: number; // seconds
   intro: {line: string; anchor: string; cam0: CamKey; cam: CamKey};
