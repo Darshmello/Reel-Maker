@@ -180,8 +180,8 @@ const blank = () => ({
   end: {line: '', anchor: '', title: '', rewind: false},
 });
 function newAct(i, kind = 'towers') {
-  const a = {kind, anchor: '', label: '', line: '', counter: {label: '', from: 0, to: 100}, cam: {...CAMS[i]}};
-  if (AMOUNT[kind]) a.amount = AMOUNT[kind][3][i];
+  const a = {kind, anchor: '', label: '', line: '', counter: {label: '', from: 0, to: 100}, cam: {...CAMS[i % CAMS.length]}};
+  if (AMOUNT[kind]) a.amount = AMOUNT[kind][3][i] ?? AMOUNT[kind][3].at(-1);
   return a;
 }
 
@@ -260,7 +260,7 @@ function buildActs() {
     })
     .join('');
   $('#endNo').textContent = spec.acts.length + 4;
-  $('#addAct').hidden = spec.acts.length >= 4;
+  $('#addAct').hidden = spec.acts.length >= 5;
 }
 
 function updateMode() {
@@ -331,7 +331,7 @@ $('#form').addEventListener('click', (e) => {
     buildActs();
   } else if (b.dataset.rm) {
     spec.acts.splice(+b.dataset.rm, 1);
-    spec.acts.forEach((a, i) => (a.cam = a.cam ?? {...CAMS[i]}));
+    spec.acts.forEach((a, i) => (a.cam = a.cam ?? {...CAMS[i % CAMS.length]}));
     rekeyTouched();
     pvAt = 0;
     buildActs();
@@ -596,36 +596,190 @@ $('#customAgent').onsubmit = async (e) => {
   }
 };
 
-// ---------------------------------------------------------------- build the acts from one prompt
-async function build(prompt) {
+// ---------------------------------------------------------------- draft a plan, review it, then generate
+let PLAN = null; // the last drafted spec, including the writer's plan/why notes
+let logStream = null;
+let logSeen = new Set();
+
+const logState = (text, cls = '') => {
+  const b = $('#logState');
+  b.textContent = text;
+  b.className = cls;
+};
+function openLog(id) {
+  closeLog();
+  logSeen = new Set();
+  $('#logWrap').hidden = false;
+  $('#logWrap').open = true;
+  const pre = $('#logBody');
+  pre.textContent = '';
+  logState('connecting', 'live');
+  logStream = new EventSource(`/api/log/stream?id=${encodeURIComponent(id)}`);
+  const add = (ev) => {
+    const key = `${ev.t}|${ev.kind}|${ev.text}`;
+    if (logSeen.has(key)) return;
+    logSeen.add(key);
+    const stick = pre.scrollTop + pre.clientHeight >= pre.scrollHeight - 40;
+    const line = document.createElement('span');
+    line.className = `k-${ev.kind}`;
+    line.textContent = `${new Date(ev.t).toTimeString().slice(0, 8)}  ${String(ev.kind).padEnd(8)} ${ev.text}\n`;
+    pre.append(line);
+    if (stick) pre.scrollTop = pre.scrollHeight;
+    if (['command', 'spawn', 'stdout', 'stderr'].includes(ev.kind)) logState('live', 'live');
+    if (ev.kind === 'exit') logState('agent exited', 'live');
+    if (ev.kind === 'parsed' || ev.kind === 'done') logState(ev.kind, 'done');
+    if (ev.kind === 'error') logState('error', 'bad');
+    if (ev.kind === 'fallback') logState('offline', 'bad');
+  };
+  logStream.addEventListener('log', (e) => {
+    try {
+      add(JSON.parse(e.data));
+    } catch {}
+  });
+  logStream.addEventListener('hello', () => logState('live', 'live'));
+  logStream.onerror = () => {
+    closeLog();
+    logState('stream closed', '');
+  };
+}
+function closeLog() {
+  if (logStream) {
+    logStream.close();
+    logStream = null;
+  }
+}
+function setBuilding(on, text) {
+  $('#building').hidden = !on;
+  if (text) $('#buildingText').textContent = text;
+  $('#build').disabled = on;
+  $('#buildNow').disabled = on;
+  $('#composer').classList.toggle('dim', on);
+}
+const draftId = () => `d${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
+
+async function build(prompt, direct = false) {
   prompt = (prompt ?? $('#prompt').value).trim();
   if (!prompt) return $('#prompt').focus();
   $('#prompt').value = prompt;
   const agent = AGENTS.agents.find((a) => a.id === $('#agentPick').value);
-  $('#building').hidden = false;
-  $('#buildingText').textContent = `${agent?.name ?? 'The writer'} is writing the acts… (Claude Code takes ~20 s; free opencode models can take a few minutes)`;
-  $('#build').disabled = true;
-  $('#composer').classList.add('dim');
+  const id = draftId();
+  $('#planCard').hidden = true;
   $('#buildNote').textContent = '';
+  openLog(id);
+  setBuilding(true, `${agent?.name ?? 'The writer'} is drafting the plan… the log below is live: the command it ran and everything it prints.`);
   const t0 = Date.now();
   try {
-    const r = await api('/api/generate', {method: 'POST', body: {prompt, agent: agent?.id}});
-    useTemplate(r.spec, false, true);
-    if ($('#autoSets').checked && r.spec.scene) startSets(r.spec.scene, +$('#variants').value, r.spec.slug, 'create');
+    const r = await api('/api/generate', {method: 'POST', body: {prompt, agent: agent?.id, id}});
+    PLAN = r.spec;
     const secs = Math.round((Date.now() - t0) / 1000);
+    if ($('#autoSets').checked && r.spec.scene) startSets(r.spec.scene, +$('#variants').value, r.spec.slug, 'create');
     $('#buildNote').textContent = r.note
-      ? `${agent?.name} didn't answer, so this is an offline draft (${r.note}). Edit it or try again.`
-      : `Written by ${r.source} in ${secs}s. ${r.check.ok ? 'All checks pass: read it through, then render.' : 'Some checks need a fix below.'}`;
+      ? `${agent?.name} didn't answer, so this is an offline draft (${r.note}). Review it, or draft again with another writer.`
+      : `Planned by ${r.source} in ${secs}s. ${r.check.ok ? 'All checks pass — read the plan, then generate.' : 'Some checks need a fix; open it in the editor.'}`;
+    if (direct) {
+      useTemplate(r.spec, false, true);
+      $('#composer').scrollIntoView({behavior: 'smooth', block: 'start'});
+    } else {
+      renderPlan(r);
+      $('#planCard').scrollIntoView({behavior: 'smooth', block: 'start'});
+    }
   } catch (e) {
     $('#buildNote').textContent = e.message;
   } finally {
-    $('#building').hidden = true;
-    $('#build').disabled = false;
-    $('#composer').classList.remove('dim');
+    setBuilding(false);
+    closeLog();
   }
 }
+
+// the review screen: what the film is, where it happens and every beat, before anything renders
+function renderPlan({spec: s, check: c, source}) {
+  const setName = (id) => SETS.find((x) => x.id === id)?.name ?? id;
+  const kindName = (k) => KIND_INFO[k]?.[0] ?? k;
+  const fmt = (n) => (Number.isFinite(n) ? n.toLocaleString() : '–');
+  const val = (c, n) => `${esc(c.prefix ?? '')}${fmt(n)}${esc(c.suffix ?? '')}`;
+  const beat = (no, body, cls = '') => `<div class="beat ${cls}"><div class="beat-no">${no}</div><div class="beat-body">${body}</div></div>`;
+  const acts = s.acts
+    .map((a, i) =>
+      beat(
+        `Act ${i + 1}`,
+        `<p class="beat-line">${esc(a.line)}</p>
+         <div class="beat-meta"><span>${esc(kindName(a.kind))}</span><span>${esc(a.shot)} shot</span><span>${esc(a.label)}</span>
+           <span>${esc(a.counter.label)} ${val(a.counter, a.counter.from)} → ${val(a.counter, a.counter.to)}</span>
+           <span>cue “${esc(a.anchor)}”</span></div>
+         ${a.why ? `<p class="beat-why">${esc(a.why)}</p>` : ''}`,
+      ),
+    )
+    .join('');
+  $('#planCard').innerHTML = `
+    <div class="plan-head">
+      <h2>${esc(s.title)}</h2>
+      <span class="tag ${c.ok ? 'ok' : 'fail'}">${c.ok ? `${c.cues.length} cues resolve in order` : `${c.errors.length} check${c.errors.length === 1 ? '' : 's'} to fix`}</span>
+    </div>
+    ${s.plan ? `<p class="plan-pitch">${esc(s.plan)}</p>` : ''}
+    <div class="plan-facts">
+      <span><b>${s.acts.length}</b> act${s.acts.length === 1 ? '' : 's'}</span>
+      <span><b>${s.duration}s</b></span>
+      <span><b>${c.words ?? '?'}</b> words, fits ${c.budget ?? '?'}</span>
+      <span>set <b>${esc(setName(s.set))}</b></span>
+      <span>${esc(s.accent)} · ${esc(s.weather)}</span>
+      <span>voice <b>${esc(s.voice.replace(/^en-/, '').replace('Neural', ''))}</b></span>
+      <span>by <b>${esc(source)}</b></span>
+    </div>
+    <div class="plan-place">
+      <span>The place</span>
+      <p>${esc(s.scene ?? 'No new place described — it reuses an installed set.')}</p>
+      <p>Plays on <b>${esc(setName(s.set))}</b>.${s.scene ? ' If you build a set for this scene, pick it in the editor and the film will use it.' : ''}</p>
+    </div>
+    <div class="plan-beats">
+      ${beat('Intro', `<p class="beat-line">${esc(s.intro.line)}</p><div class="beat-meta"><span>cue “${esc(s.intro.anchor)}”</span><span>camera pushes in</span></div>`)}
+      ${acts}
+      ${beat('End', `<p class="beat-line">${esc(s.end.line)}</p><div class="beat-meta"><span>card: ${esc(s.end.title)}</span><span>cue “${esc(s.end.anchor)}”</span><span>${s.end.rewind ? 'rewinds and loops' : 'cuts to black'}</span></div>`, 'end')}
+    </div>
+    ${c.ok ? '' : `<ul class="issues">${(c.errors ?? []).slice(0, 8).map((e) => `<li>${esc(e)}</li>`).join('')}</ul>`}
+    <div class="plan-actions">
+      <button class="btn primary" data-plan="go" type="button">Generate this film</button>
+      <button class="btn ghost" data-plan="edit" type="button">Open in the editor</button>
+      <button class="btn ghost" data-plan="again" type="button">Draft again</button>
+      <span class="spacer"></span>
+      <span class="note">Generating saves it to ideas.json and starts the render (~15–20 min).</span>
+    </div>`;
+  $('#planCard').hidden = false;
+}
+
+$('#planCard').onclick = async (e) => {
+  const b = e.target.closest('[data-plan]');
+  if (!b || !PLAN) return;
+  const what = b.dataset.plan;
+  if (what === 'edit') {
+    useTemplate(PLAN, false, true);
+    $('#buildNote').textContent = 'Editing the plan. Change any line, act or shot below, then Save and render.';
+    $('#composer').scrollIntoView({behavior: 'smooth', block: 'start'});
+    return;
+  }
+  if (what === 'again') {
+    $('#planCard').hidden = true;
+    return build(null);
+  }
+  if (what === 'go') {
+    const label = b.textContent;
+    b.disabled = true;
+    b.textContent = 'Saving…';
+    try {
+      useTemplate(PLAN, false, true);
+      await save();
+      $('#planCard').hidden = true;
+      await startRender(spec.slug, $('#keepVo').checked);
+    } catch (err) {
+      toast(err.message);
+      b.disabled = false;
+      b.textContent = label;
+    }
+  }
+};
+
 $('#build').onclick = () => build();
-$('#prompt').onkeydown = (e) => e.key === 'Enter' && build();
+$('#buildNow').onclick = () => build(null, true);
+$('#prompt').onkeydown = (e) => (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) && (e.preventDefault(), build());
 $('#heroAsk').onsubmit = (e) => {
   e.preventDefault();
   const p = $('#heroPrompt').value.trim();

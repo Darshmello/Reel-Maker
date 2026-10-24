@@ -80,7 +80,7 @@ const validate = (s) => {
   if (!(s?.weather in pal.weather)) errors.push(`weather must be one of ${Object.keys(pal.weather).join(', ')}`);
   if (s?.set !== undefined && !listSets().some((m) => m.id === s.set)) errors.push(`set "${s.set}" is not installed`);
   if (!(s?.duration >= 15 && s?.duration <= 90)) errors.push('duration: 15-90 s');
-  if (!Array.isArray(s?.acts) || s.acts.length < 1 || s.acts.length > 4) errors.push('1-4 acts');
+  if (!Array.isArray(s?.acts) || s.acts.length < 1 || s.acts.length > 5) errors.push('1-5 acts');
   if (errors.length) return {ok: false, errors, cues: []};
   const lines = [s.intro, ...s.acts, s.end];
   lines.forEach((l, i) => {
@@ -124,6 +124,21 @@ const send = (ev, data) => {
   for (const res of clients) res.write(`event: ${ev}\ndata: ${JSON.stringify(data)}\n\n`);
 };
 const jobView = () => job && {slug: job.slug, state: job.state, step: job.step, done: job.done, startedAt: job.startedAt, endedAt: job.endedAt, steps: STEPS, tail: job.lines.slice(-200)};
+
+// ---- writer log: the exact CLI command and everything it prints, buffered per draft id and streamed
+// over SSE, so the studio can show that the agent really opened and is working (not silently stuck).
+const writerLog = new Map(); // id -> [{t, kind, text}]
+const logStreams = new Set(); // {id, res}
+const pushLog = (id, kind, text) => {
+  id = String(id ?? '').replace(/[^\w-]/g, '').slice(0, 40) || 'draft';
+  const ev = {t: Date.now(), kind: String(kind).slice(0, 20), text: String(text ?? '').slice(0, 500)};
+  const buf = writerLog.get(id) ?? [];
+  buf.push(ev);
+  if (buf.length > 600) buf.splice(0, buf.length - 600);
+  writerLog.set(id, buf);
+  for (const s of logStreams) if (s.id === id) s.res.write(`event: log\ndata: ${JSON.stringify(ev)}\n\n`);
+};
+const logView = (id) => writerLog.get(id) ?? [];
 
 const startRender = (slug, keepVo) => {
   const log = join(ROOT, 'out', `${slug}.studio.log`);
@@ -185,7 +200,9 @@ const runChild = (job, item, args) => {
       const m = l.match(/^\[(\w+)\] (.*)$/);
       if (m) {
         item.stage = m[1];
-        item.log.push(m[2]);
+        item.log.push(m[2].slice(0, 300));
+        if (item.log.length > 300) item.log.splice(0, item.log.length - 300);
+        pushLog(`set:${job.id}`, m[1], m[2]);
         send('sets', setJobView(job));
       }
     }
@@ -282,15 +299,41 @@ createServer(async (req, res) => {
       return json(res, 200, {ok: true});
     }
     if (path === '/api/generate' && req.method === 'POST') {
-      const {prompt, agent} = await body(req);
+      const {prompt, agent, id} = await body(req);
       if (!String(prompt ?? '').trim()) return json(res, 400, {error: 'write a prompt first'});
-      const r = await generate(String(prompt).slice(0, 500), {validate, slugs: readIdeas().map((s) => s.slug), agentId: agent});
-      return json(res, 200, r);
+      const logId = /^[\w-]{1,40}$/.test(String(id ?? '')) ? String(id) : `draft${++jobSeq}`;
+      pushLog(logId, 'start', `plan requested: ${String(prompt).replace(/\s+/g, ' ').slice(0, 300)}`);
+      try {
+        const r = await generate(String(prompt).slice(0, 1200), {validate, slugs: readIdeas().map((s) => s.slug), agentId: agent, onLog: (k, t) => pushLog(logId, k, t)});
+        pushLog(logId, 'done', `${r.source}: ${r.spec.acts.length} act(s), ${r.spec.duration}s, ${r.check.words}/${r.check.budget} words${r.check.ok ? '' : `, ${r.check.errors.length} check(s) to fix`}`);
+        return json(res, 200, {...r, logId});
+      } catch (e) {
+        pushLog(logId, 'error', e.message);
+        return json(res, 500, {error: e.message, logId});
+      }
+    }
+    if (path === '/api/log/stream') {
+      const id = String(url.searchParams.get('id') ?? '').replace(/[^\w-]/g, '').slice(0, 40) || 'draft';
+      res.writeHead(200, {'content-type': 'text/event-stream', 'cache-control': 'no-cache', connection: 'keep-alive'});
+      res.write(`event: hello\ndata: ${JSON.stringify({id, count: logView(id).length})}\n\n`);
+      for (const ev of logView(id)) res.write(`event: log\ndata: ${JSON.stringify(ev)}\n\n`);
+      const sub = {id, res};
+      logStreams.add(sub);
+      const beat = setInterval(() => res.write(': ping\n\n'), 15000);
+      req.on('close', () => {
+        clearInterval(beat);
+        logStreams.delete(sub);
+      });
+      return;
     }
     if (path === '/api/films' && req.method === 'GET') return json(res, 200, {films: films(), palette: palette(), kinds: KINDS, job: jobView()});
     if (path === '/api/check' && req.method === 'POST') return json(res, 200, validate(await body(req)));
     if (path === '/api/films' && req.method === 'POST') {
-      const s = await body(req);
+      const b = await body(req);
+      // the review notes (plan, per-act why) are for the screen, not the film
+      const s = {...b, acts: (b.acts ?? []).map(({why, ...a}) => a)};
+      delete s.plan;
+      delete s.check;
       const v = validate(s);
       if (!v.ok) return json(res, 400, v);
       if (job?.state === 'running' && job.slug === s.slug) return json(res, 409, {errors: ['that film is rendering right now']});

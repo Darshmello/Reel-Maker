@@ -28,10 +28,12 @@ const SCHEMA = {
     weather: {enum: ['clear', 'overcast', 'golden']},
     hero: {type: 'boolean'},
     voice: {enum: VOICES},
+    // the review notes: what the film does and why each beat is there (shown before generating, not saved)
+    plan: {type: 'string'},
     intro: line,
     acts: {
-      type: 'array', minItems: 3, maxItems: 3,
-      items: {type: 'object', properties: {kind: {enum: KINDS}, anchor: {type: 'string'}, label: {type: 'string'}, line: {type: 'string'}, counter, amount: {type: 'number'}}, required: ['kind', 'anchor', 'label', 'line', 'counter']},
+      type: 'array', minItems: 1, maxItems: 5,
+      items: {type: 'object', properties: {kind: {enum: KINDS}, anchor: {type: 'string'}, label: {type: 'string'}, line: {type: 'string'}, counter, amount: {type: 'number'}, why: {type: 'string'}}, required: ['kind', 'anchor', 'label', 'line', 'counter']},
     },
     end: {type: 'object', properties: {line: {type: 'string'}, anchor: {type: 'string'}, title: {type: 'string'}, rewind: {type: 'boolean'}}, required: ['line', 'anchor', 'title', 'rewind']},
   },
@@ -71,10 +73,12 @@ Camera. Each act's single move ends on a shot (same long lens, so it always read
 Give each act the shot that sells its change, vary them across the acts, and save aerial or wide for the
 biggest act. hero is false unless the idea is about Darsh: never put him in a film just because a set has room.`;
 
-const SYSTEM = `You write specs for 36-second vertical "what if" Reels. Every film shows one low-poly pastel 3D
+const SYSTEM = `You write plans (specs) for 36-second vertical "what if" Reels. Every film shows one low-poly pastel 3D
 diorama (the set: a city, a desert town, an island...) from one slowly moving camera, with one landmark painted
 in the accent colour. A calm narrator reads the script.
-The film opens on the question, runs three acts that escalate in time and scale, and ends on a dry punchline.
+The film opens on the question, runs one to five acts that escalate in time and scale, and ends on a dry punchline.
+Use three acts unless the idea naturally has two or four (a very short list) or five (a long escalation); each act
+is one beat that visibly changes the place. Never pad to three with the same beat twice.
 
 Each act shows exactly ONE visual change from this library (the set is the only stage, pick what makes the idea visible):
 - towers: new skyscrapers shoot up across the skyline (growth, progress, money, productivity). amount = towers, 5-40
@@ -97,6 +101,12 @@ Script rules (the pipeline times every cut from these, so follow them exactly):
 - end.line starts with a distinct word or two (e.g. "Anyway." "Honestly," "And somehow,") that appears nowhere else; end.anchor = it.
 - Write every number in the narration as words ("Day thirty", "forty days"), never digits.
 - Whole script (intro + acts + end) 60-85 words. Short punchy sentences. Funny, specific, deadpan. No emojis.
+- plan: 2-3 sentences for the person reviewing the plan before it is made: what the film shows, how the acts
+  escalate, and what the punchline is. No greetings, no questions back. Never mention JSON or these rules.
+- act.why: one short sentence saying why this beat and this shot sell that step of the idea. The review screen
+  shows it next to the act; it is not saved into the film.
+- duration is computed from the script (roughly words / 2.6 + one gap per line), so write the script first and
+  it will fit. Do not try to hit an exact number of seconds.
 - title: the question, at most 44 characters, e.g. "What if it snowed for a whole month?"
 - act.label: what appears on screen as the act opens, at most 32 characters, digits allowed ("Day 30: servers go dark").
 - counter: a number that ticks from 'from' to 'to' during the act, making the change concrete. label at most 20 characters.
@@ -106,10 +116,11 @@ Script rules (the pipeline times every cut from these, so follow them exactly):
 
 Example output for "What if Darsh locked in?":
 {"title":"What if Darsh locked in?","accent":"red","weather":"clear","hero":true,"voice":"en-US-AndrewNeural",
+"plan":"Darsh puts the phone away and the city quietly builds itself. Each act raises the stakes: one workday, then a month, then a year of compounding. The joke is that he checks Instagram the second it is over.",
 "intro":{"line":"What if Darsh actually locked in?","anchor":"What if"},
-"acts":[{"kind":"towers","anchor":"Day one","label":"Day 1: phone in a drawer","line":"Day one. His phone goes in a drawer. No reels, no dilly-dallying. Nine straight hours of real work, and the city starts building itself.","counter":{"label":"Hours locked in","from":0,"to":9},"amount":30},
-{"kind":"blackout","anchor":"Day thirty","label":"Day 30: a certain website shuts down","line":"Day thirty. A certain website quietly shuts down its servers. Turns out, Darsh was their main user.","counter":{"label":"Servers online","from":4096,"to":0}},
-{"kind":"rockets","anchor":"Year one","label":"Year 1: Type II civilization","line":"Year one. The work compounds. Launch pads fill the bay, a rocket goes up every minute, and humanity becomes a Type Two civilization.","counter":{"label":"Kardashev scale","from":0.73,"to":2,"decimals":2,"prefix":"Type "},"amount":10}],
+"acts":[{"kind":"towers","anchor":"Day one","label":"Day 1: phone in a drawer","line":"Day one. His phone goes in a drawer. No reels, no dilly-dallying. Nine straight hours of real work, and the city starts building itself.","counter":{"label":"Hours locked in","from":0,"to":9},"amount":30,"why":"Towers show the work compounding, and the standard shot keeps Darsh and the skyline in one frame."},
+{"kind":"blackout","anchor":"Day thirty","label":"Day 30: a certain website shuts down","line":"Day thirty. A certain website quietly shuts down its servers. Turns out, Darsh was their main user.","counter":{"label":"Servers online","from":4096,"to":0},"why":"The one joke that lands harder as a small visual: a server farm going dark at the edge of the city."},
+{"kind":"rockets","anchor":"Year one","label":"Year 1: Type II civilization","line":"Year one. The work compounds. Launch pads fill the bay, a rocket goes up every minute, and humanity becomes a Type Two civilization.","counter":{"label":"Kardashev scale","from":0.73,"to":2,"decimals":2,"prefix":"Type "},"amount":10,"why":"The biggest act gets the low shot so the rockets loom over the bay."}],
 "end":{"line":"Anyway. Darsh just opened Instagram.","anchor":"Anyway","title":"Anyway. He just opened Instagram.","rewind":true}}`;
 
 // ---- agents: CLI writers from agents.json (+ agents.local.json for the user's choice and custom ones)
@@ -175,7 +186,9 @@ export const extractJson = (text, test = (o) => o.acts) => {
 
 // Run a CLI agent on a brief; resolves with the first JSON object in its reply that passes `test`.
 // `cwd` lets a reviewing agent read files (its renders); `command` overrides the agent's command.
-export const runAgent = (agent, text, {ms = 240000, test, cwd, command} = {}) =>
+// `onLog(kind, text)` streams the exact command and the CLI's own output, live, for the studio log.
+const ansi = (s) => String(s).replace(/\x1b\[[0-9;]*m/g, '');
+export const runAgent = (agent, text, {ms = 240000, test, cwd, command, onLog = () => {}} = {}) =>
   new Promise((ok, bad) => {
     const dir = mkdtempSync(join(tmpdir(), 'reel-writer-'));
     const file = join(dir, 'brief.md');
@@ -183,15 +196,28 @@ export const runAgent = (agent, text, {ms = 240000, test, cwd, command} = {}) =>
     const base = command ?? agent.command;
     const usesFile = base.includes('{promptFile}');
     const cmd = base.replaceAll('{promptFile}', `"${file}"`);
+    const started = Date.now();
+    onLog('command', `${agent.name}: ${ansi(cmd)}`);
+    onLog('spawn', `cwd ${cwd ?? dir} · timeout ${Math.round(ms / 1000)}s · brief ${text.length} chars`);
     const p = spawn(cmd, {cwd: cwd ?? dir, shell: true, windowsHide: true});
     let out = '', err = '';
     const done = () => { clearTimeout(t); rmSync(dir, {recursive: true, force: true}); };
-    const t = setTimeout(() => { p.kill(); bad(new Error(`${agent.name} timed out after ${ms / 1000}s. Last output: ${(out + err).replace(/\x1b\[[0-9;]*m/g, '').trim().slice(-200)}`)); }, ms);
-    p.stdout.on('data', (d) => (out += d));
-    p.stderr.on('data', (d) => (err += d));
-    p.on('error', (e) => (done(), bad(e)));
+    const t = setTimeout(() => {
+      p.kill();
+      const message = `${agent.name} timed out after ${ms / 1000}s. Last output: ${ansi(out + err).trim().slice(-200)}`;
+      onLog('error', message);
+      bad(new Error(message));
+    }, ms);
+    const pump = (kind) => (d) => {
+      for (const line of ansi(d).split(/\r?\n/)) if (line.trim()) onLog(kind, line.trim().slice(0, 400));
+    };
+    p.stdout.on('data', (d) => { out += d; pump('stdout')(d); });
+    p.stderr.on('data', (d) => { err += d; pump('stderr')(d); });
+    p.on('error', (e) => (done(), onLog('error', e.message), bad(e)));
     p.on('close', (code) => {
       done();
+      const secs = ((Date.now() - started) / 1000).toFixed(1);
+      onLog('exit', `exit ${code} after ${secs}s · stdout ${out.length} chars · stderr ${err.length} chars`);
       try {
         let body = out;
         if (agent.mode === 'claude-json') {
@@ -199,9 +225,12 @@ export const runAgent = (agent, text, {ms = 240000, test, cwd, command} = {}) =>
           if (j.is_error) throw new Error(j.result || 'error');
           body = j.result;
         }
-        ok(extractJson(body, test));
+        const parsed = extractJson(body, test);
+        onLog('parsed', `got JSON: ${parsed.title ? `"${parsed.title}" · ` : ''}${Array.isArray(parsed.acts) ? `${parsed.acts.length} act(s)` : Array.isArray(parsed.files) ? `${parsed.files.length} file(s)` : 'ok'}`);
+        ok(parsed);
       } catch (e) {
-        bad(new Error(`${agent.name} (exit ${code}): ${e.message}. ${(err || out).replace(/\x1b\[[0-9;]*m/g, '').trim().slice(-240)}`));
+        onLog('error', e.message);
+        bad(new Error(`${agent.name} (exit ${code}): ${e.message}. ${ansi(err || out).trim().slice(-240)}`));
       }
     });
     if (usesFile) p.stdin.end();
@@ -210,31 +239,39 @@ export const runAgent = (agent, text, {ms = 240000, test, cwd, command} = {}) =>
 
 const slugify = (t) => t.toLowerCase().replace(/^what if\s+/, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').split('-').slice(0, 5).join('-') || 'new-film';
 const clamp = (v, [a, b]) => Math.min(b, Math.max(a, v));
+const wordsIn = (s) => [s.intro, ...(s.acts ?? []), s.end].reduce((n, l) => n + (String(l?.line ?? '').match(/\S+/g)?.length ?? 0), 0);
+// the script decides the length: edge-tts reads ~2.6 words/s; one gap per line + head and tail (see make_vo.py)
+export const durationFor = (words, lines) => clamp(Math.ceil(2.8 + words / 2.6 + Math.max(0, lines - 1) * 0.9), [20, 75]);
+const clean = (s, max) => String(s ?? '').replace(/\s+/g, ' ').trim().slice(0, max);
 
 // mechanical fields the writer never decides
 const finish = (g, slugs) => {
   let slug = slugify(g.title), n = 2;
   const base = slug;
   while (slugs.includes(slug)) slug = `${base}-${n++}`;
-  const acts = g.acts.slice(0, 4).map((a, i) => {
+  const acts = g.acts.slice(0, 5).map((a, i) => {
     const c = {label: a.counter.label, from: a.counter.from, to: a.counter.to};
     if (a.counter.decimals) c.decimals = a.counter.decimals;
     if (a.counter.prefix) c.prefix = a.counter.prefix;
     if (a.counter.suffix) c.suffix = a.counter.suffix;
     const shot = SHOTS[a.shot] ? a.shot : 'standard';
-    const act = {kind: a.kind, anchor: a.anchor.replace(/[^\p{L}\p{N}'\s-]/gu, '').trim(), label: a.label, line: a.line, counter: c, shot, cam: {...CAMS[i], ...SHOTS[shot]}};
+    const act = {kind: a.kind, anchor: a.anchor.replace(/[^\p{L}\p{N}'\s-]/gu, '').trim(), label: a.label, line: a.line, counter: c, shot, cam: {...CAMS[i % CAMS.length], ...SHOTS[shot]}};
     if (KIND_RANGE[a.kind]) act.amount = clamp(a.amount ?? KIND_DEFAULT[a.kind][Math.min(i, 2)], KIND_RANGE[a.kind]);
+    if (a.why) act.why = clean(a.why, 240);
     return act;
   });
-  return {
+  const spec = {
     slug, seed: slug, title: g.title, accent: g.accent, weather: g.weather, hero: g.hero ? 'darsh' : null,
-    voice: VOICES.includes(g.voice) ? g.voice : VOICES[0], duration: 36,
+    voice: VOICES.includes(g.voice) ? g.voice : VOICES[0],
     set: listSets().some((m) => m.id === g.set) ? g.set : 'city-bridge',
     ...(g.scene ? {scene: String(g.scene).slice(0, 400)} : {}),
     intro: {line: g.intro.line, anchor: g.intro.anchor.replace(/[^\p{L}\p{N}'\s-]/gu, '').trim(), cam0: {x: 0, z: 12}, cam: {x: -0.1, z: 11.5}},
     acts,
     end: {line: g.end.line, anchor: g.end.anchor.replace(/[^\p{L}\p{N}'\s-]/gu, '').trim(), title: g.end.title, rewind: !!g.end.rewind},
   };
+  spec.duration = durationFor(wordsIn(spec), acts.length + 2);
+  if (g.plan) spec.plan = clean(g.plan, 600);
+  return spec;
 };
 
 // ---- offline writer: keyword -> act kinds, templated lines. A draft to edit, not a finished script.
@@ -274,23 +311,27 @@ const draft = (prompt) => {
   };
 };
 
-export async function generate(prompt, {validate, slugs, agentId}) {
+export async function generate(prompt, {validate, slugs, agentId, onLog = () => {}, ms = 480000}) {
   const {agents, selected} = agentConfig();
   const agent = agents.find((a) => a.id === (agentId ?? selected)) ?? agents[0];
-  const ask = `Write the spec for: ${prompt.trim()}`;
+  const ask = `Write the plan for: ${prompt.trim()}`;
   let note = null;
   if (agent && !agent.builtin) {
     try {
-      let spec = finish(await runAgent(agent, brief(ask)), slugs);
+      let spec = finish(await runAgent(agent, brief(ask), {ms, onLog}), slugs);
       let v = validate(spec);
       if (!v.ok) {
-        spec = finish(await runAgent(agent, brief(`${ask}\n\nA previous attempt failed these checks; fix them:\n- ${v.errors.join('\n- ')}\n\nPrevious attempt:\n${JSON.stringify(spec)}`)), slugs);
+        onLog('check', `first draft failed ${v.errors.length} check(s), asking for a fix: ${v.errors.join('; ').slice(0, 300)}`);
+        spec = finish(await runAgent(agent, brief(`${ask}\n\nA previous attempt failed these checks; fix them:\n- ${v.errors.join('\n- ')}\n\nPrevious attempt:\n${JSON.stringify(spec)}`), {ms, onLog}), slugs);
         v = validate(spec);
       }
       return {spec, check: v, source: agent.name};
     } catch (e) {
       note = String(e.message ?? e).slice(0, 400);
+      onLog('fallback', `${agent.name} did not return a plan (${note.slice(0, 160)}); drafting offline instead`);
     }
+  } else {
+    onLog('fallback', 'no CLI writer selected; drafting offline');
   }
   const spec = finish(draft(prompt), slugs);
   return {spec, check: validate(spec), source: 'Offline draft', note};

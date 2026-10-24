@@ -97,7 +97,7 @@ const writePack = (id, files, request, author) => {
 export const slugifySet = (t) => t.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').split('-').slice(0, 4).join('-') || 'new-set';
 
 // log(stage, detail) reports progress; returns {id, ok, errors, attempts, reviewed}
-export async function generateSet(request, {agentId, id, log = () => {}, review = true} = {}) {
+export async function generateSet(request, {agentId, id, log = () => {}, review = true, onLog = () => {}} = {}) {
   const {agents, selected} = agentConfig();
   const agent = agents.find((a) => a.id === (agentId ?? selected) && !a.builtin) ?? agents.find((a) => a.id === 'claude');
   id = id ?? slugifySet(request);
@@ -111,7 +111,7 @@ export async function generateSet(request, {agentId, id, log = () => {}, review 
     log('writing', `${agent.name}: attempt ${attempts + 1}`);
     let files;
     try {
-      files = await runAgent(agent, brief(request, id, extra), {ms: 420000, test: isFiles});
+      files = await runAgent(agent, brief(request, id, extra), {ms: 420000, test: isFiles, onLog});
     } catch (e) {
       last = {ok: false, errors: [String(e.message).slice(0, 400)]};
       extra = '';
@@ -133,7 +133,7 @@ export async function generateSet(request, {agentId, id, log = () => {}, review 
     const ask = `${brief(request, id)}\n\nYou already wrote this pack; it passes the checks. Use the Read tool to look at cover.png (the set's opening frame) and probe.png (after a server farm, growing towers, a crowd and rockets) in the current folder. Judge them against the composition rules: is the lower half filled with small readable things, is the landmark readable in the accent colour, is there depth, does it look like a calm pastel model? Start your reply with what you saw. If it is good, reply {"ok": true, "seen": "<one sentence: what the renders show>"}. Otherwise reply with revised files in the same JSON shape plus "seen".\n\nCurrent index.ts:\n${cur.index}\n\nCurrent palette.ts:\n${cur.palette}`;
     try {
       const cmd = agent.mode === 'claude-json' ? agent.command.replace('--tools ""', '--tools Read --allowedTools Read') : agent.command;
-      const r = await runAgent(agent, ask, {ms: 420000, cwd: dir, command: cmd, test: (o) => o.ok === true || isFiles(o)});
+      const r = await runAgent(agent, ask, {ms: 420000, cwd: dir, command: cmd, test: (o) => o.ok === true || isFiles(o), onLog});
       reviewed = true;
       log('reviewing', `${isFiles(r) ? 'revising' : 'approved'}: ${String(r.seen ?? '').slice(0, 200)}`);
       if (isFiles(r)) {
@@ -161,7 +161,12 @@ export async function generateSet(request, {agentId, id, log = () => {}, review 
 
 if (process.argv[1] && resolve(process.argv[1]) === resolve(import.meta.filename)) {
   const [request, id, agentId] = process.argv.slice(2);
-  const r = await generateSet(request, {id, agentId: agentId || undefined, log: (s, d) => console.error(`[${s}] ${d}`)});
+  const r = await generateSet(request, {
+    id,
+    agentId: agentId || undefined,
+    log: (s, d) => console.error(`[${s}] ${d}`),
+    onLog: (k, t) => console.error(`[agent] ${k}: ${String(t).slice(0, 220)}`),
+  });
   console.log(JSON.stringify(r));
   process.exit(r.ok ? 0 : 1);
 }

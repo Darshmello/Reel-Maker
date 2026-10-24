@@ -86,10 +86,22 @@
         </header>
 
         <div class="prompt-card">
-          <label class="prompt-label" for="prompt">Your question</label>
+          <label class="prompt-label" for="prompt">Your idea — explain it properly</label>
+          <textarea id="prompt" class="prompt-input" rows="3" maxlength="1200" placeholder="What if every house in a mountain village became a hotel? It's an Alpine village: chalets, a church spire, snow on the peaks. Each season the hotels get bigger, tour buses fill the square, and by winter the whole mountain is one resort."></textarea>
+          <details class="adv brief-guide" id="briefGuide">
+            <summary>How to explain it so the plan comes out right</summary>
+            <ul class="guide">
+              <li><b>The question.</b> One “what if” you can see happen: <i>What if every house in a mountain village became a hotel?</i> Keep it a single change to one place.</li>
+              <li><b>The place.</b> Say where it is (an Alpine village, a Bay Area suburb, a moon base) if it matters. The writer describes the set in detail and can build a new one.</li>
+              <li><b>The escalation.</b> What happens first, then bigger, then biggest? Those become the acts. Three is normal; say so if the idea needs two, four or five.</li>
+              <li><b>The punchline.</b> How does it end — ideally one dry line that undoes it all, so the film loops cleanly.</li>
+              <li><b>The tone.</b> Deadpan, cosy, ominous, smug. Say it if you care. Keep Darsh out unless the idea is about you.</li>
+            </ul>
+            <p class="note">You don’t have to write any of the script. The writer turns this into a plan — title, the set, every narration line, the acts, the counters and the shots — and you review it before anything is rendered.</p>
+          </details>
           <div class="prompt-row">
-            <input id="prompt" class="prompt-input" placeholder="What if everyone quit their job on the same day?" maxlength="200">
-            <button class="btn primary" id="build" type="button">Build the acts</button>
+            <button class="btn primary" id="build" type="button">Draft the plan</button>
+            <button class="btn ghost" id="buildNow" type="button">Skip the review</button>
           </div>
           <div class="prompt-foot">
             <label class="inline">Writer <select id="agentPick"></select></label>
@@ -100,7 +112,13 @@
           </div>
           <div class="building" id="building" hidden><i></i><span id="buildingText">Writing the acts…</span></div>
           <p class="note" id="buildNote"></p>
+          <details class="writer-log" id="logWrap">
+            <summary><span>Writer log — the exact CLI command and everything it prints</span><b id="logState">idle</b></summary>
+            <pre id="logBody">Nothing yet. Draft a plan and every line the writer prints lands here: the command it ran, when the process started, what it streams back, and the JSON it parsed.</pre>
+          </details>
         </div>
+
+        <section class="plan" id="planCard" hidden></section>
 
         <div class="composer" id="composer">
           <form id="form" autocomplete="off">
@@ -114,7 +132,7 @@
               </div>
               <div class="row">
                 <label class="field"><span>Voice</span><select id="voice"></select></label>
-                <label class="field small"><span>Seconds</span><input id="duration" type="number" min="20" max="60" step="1"></label>
+                <label class="field small"><span>Seconds</span><input id="duration" type="number" min="15" max="90" step="1"></label>
                 <label class="toggle"><input type="checkbox" id="hero"><i></i><span>Put Darsh in it</span></label>
               </div>
               <details class="adv"><summary>File name and seed</summary>
